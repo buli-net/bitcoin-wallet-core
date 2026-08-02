@@ -151,5 +151,6 @@ jobs:
             keystore-info.txt
             out/raw-sha256.txt
             verify-*.txt
+            commit.txt
           retention-days: 90
           compression-level: 0
