@@ -385,7 +385,7 @@
 <!-- Title of paper wallet screen -->
 <string name="paper_wallet_activity_title">Create paper wallet</string>
 <!-- Warning text shown on top of paper wallet -->
-<string name="paper_wallet_warning">WARNING: Paper wallet contains the private key. Anyone with this key can spend all coins. Print and store in safe place.</string>
+<string name="paper_wallet_warning">WARNING: With this key can spend all coins. Print and store in safe place.</string>
 
 <!-- Labels -->
 <string name="paper_wallet_public_label">Public Key</string>
@@ -435,7 +435,7 @@
 <string name="paper_wallet_bip38_ready">BIP38 encryption done</string>
 <!-- %1$s = error message -->
 <string name="paper_wallet_bip38_failed">BIP38 encryption failed: %1$s</string>
-<string name="paper_wallet_bip38_hint">BIP38: Private key is encrypted with password. Password required to sweep.</string>
+<string name="paper_wallet_bip38_hint">BIP38: Private key is encrypted with password.</string>
 
 <!-- Save / Export / Share / Print -->
 <!-- %1$s = filename -->
