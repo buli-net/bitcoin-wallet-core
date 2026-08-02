@@ -146,11 +146,11 @@ jobs:
         with:
           name: apk-v11.04-signed-docker
           path: |
-            apk/*.apk
+            signed/*.apk
             debug/report.txt
-            debug/keystore-info.txt
-            debug/raw-sha256.txt
-            debug/verify-*.txt
-            debug/commit.txt
+            keystore-info.txt
+            out/raw-sha256.txt
+            verify-*.txt
+            commit.txt
           retention-days: 90
           compression-level: 0
