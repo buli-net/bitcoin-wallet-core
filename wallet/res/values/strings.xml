@@ -391,7 +391,7 @@
 <string name="paper_wallet_public_label">Public Key</string>
 <string name="paper_wallet_private_label">Private Key</string>
 <!-- Shown when address/key is hidden -->
-<string name="paper_wallet_hidden">•••••••••hidden•••••••••</string>
+<string name="paper_wallet_hidden">••••••••••••••••••••••••</string>
 
 <!-- Copy / Hide / Show -->
 <string name="paper_wallet_copy">Copy</string>
