@@ -391,7 +391,7 @@
 <string name="paper_wallet_public_label">Public Key</string>
 <string name="paper_wallet_private_label">Private Key</string>
 <!-- Shown when address/key is hidden -->
-<string name="paper_wallet_hidden">••••••••••••••••••••••••</string>
+<string name="paper_wallet_hidden">•••••••••hidden•••••••••</string>
 
 <!-- Copy / Hide / Show -->
 <string name="paper_wallet_copy">Copy</string>
@@ -404,9 +404,9 @@
 
 <!-- Public address formats - ONLY sweepable by original wallet -->
 <!-- 1 = Legacy compressed P2PKH 1... WIF K/L... -->
-<string name="paper_wallet_public_format_legacy">Legacy-C</string>
+<string name="paper_wallet_public_format_legacy">P2PKH</string>
 <!-- 2 = Native SegWit Bech32 P2WPKH bc1q... - sweepable by original -->
-<string name="paper_wallet_public_format_bech32">SegWit</string>
+<string name="paper_wallet_public_format_bech32">P2WPKH</string>
 <!-- HEX view of pubkey -->
 <string name="paper_wallet_public_format_hex">HEX</string>
 
