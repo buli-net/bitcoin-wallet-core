@@ -1,14 +1,10 @@
-Technical details
+Technical details ( Update de.schildbach --> net.buli )
 =================
 
 ### FILES
 
 Your wallet contains your private keys and various transaction related metadata. It is stored in app-private
 storage:
-
-   # Testnet: /data/data/de.schildbach.wallet_test/files/wallet-protobuf-testnet
-   # Signet:  /data/data/corp.wallet.bitcoin.signet/files/wallet-protobuf-signet
-   # Mainnet: /data/data/de.schildbach.wallet/files/wallet-protobuf
    
     Testnet: /data/data/net.buli.wallet_test/files/wallet-protobuf-testnet
     Signet:  /data/data/corp.wallet.bitcoin.signet/files/wallet-protobuf-signet
@@ -18,10 +14,6 @@ The wallet file format is not compatible to wallet.dat (Satoshi client). Rather,
 which should be compatible between clients using bitcoinj.
 
 Certain actions cause automatic rolling backups of your wallet to app-private storage:
-
-   # Testnet: /data/data/de.schildbach.wallet_test/files/key-backup-protobuf-testnet
-   # Signet:  /data/data/corp.wallet.bitcoin.signet/files/key-backup-protobuf-signet
-   # Mainnet: /data/data/de.schildbach.wallet/files/key-backup-protobuf
 
     Testnet: /data/data/net.buli.wallet_test/files/key-backup-protobuf-testnet
     Signet:  /data/data/corp.wallet.bitcoin.signet/files/key-backup-protobuf-signet
@@ -39,22 +31,14 @@ itself to restore from the backup, see the separate [README.recover.md](README.r
 The current fee rate for each of the fee categories (economic, normal, priority) is cached in
 app-private storage:
 
-   # Testnet: /data/data/de.schildbach.wallet_test/files/fees-testnet.txt
-   # Signet:  /data/data/corp.wallet.bitcoin.signet/files/fees-signet.txt
-   # Mainnet: /data/data/de.schildbach.wallet/files/fees.txt
-   
     Testnet: /data/data/net.buli.wallet_test/files/fees-testnet.txt
     Signet:  /data/data/corp.wallet.bitcoin.signet/files/fees-signet.txt
     Mainnet: /data/data/net.buli.wallet/files/fees.txt
 
 
-
 ### DEBUGGING
 
 The wallet file can be pulled from a device using:
-
-   # Testnet: adb pull /data/data/de.schildbach.wallet_test/files/wallet-protobuf-testnet
-   # Signet:  adb pull /data/data/corp.wallet.bitcoin.signet/files/wallet-protobuf-signet
 
     Testnet: adb pull /data/data/net.buli.wallet_test/files/wallet-protobuf-testnet
     Signet:  adb pull /data/data/corp.wallet.bitcoin.signet/files/wallet-protobuf-signet
