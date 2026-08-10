@@ -23,7 +23,7 @@
  * - Reason: sweep scanner fails to detect uncompressed P2PKH
  * - Retained: Legacy Compressed P2PKH (K/L... -> 1...) and Native SegWit P2WPKH (bc1q...)
  * - All generated keys are now forced to compressed = true
- * - Fixed network detection: separate Signet from Testnet, use exact network params for WIF
+ * - Network detection: separate Signet from Testnet, use exact network params for WIF
  */
 
 package wallet.ui;
@@ -262,7 +262,7 @@ public class PaperWalletActivity extends AbstractWalletActivity {
     }
 
     // -----------------------------------------------------------------
-    // NETWORK DETECTION - Fixed: separate Signet, return correct network
+    // NETWORK DETECTION - Determines Mainnet/Testnet/Regtest
     // -----------------------------------------------------------------
     private Network getNetwork() {
         NetworkParameters params = Constants.NETWORK_PARAMETERS;
@@ -342,7 +342,7 @@ public class PaperWalletActivity extends AbstractWalletActivity {
         currentAddress = getAddressForType(currentKey, network, typeIndex);
         currentPubKeyHex = currentKey.getPublicKeyAsHex();
 
-        // Fixed: use exact current network params, no guess logic
+        // Determine WIF network parameters
         NetworkParameters wifParams = Constants.NETWORK_PARAMETERS;
 
         // Force compressed WIF (starts with K/L on mainnet, c on testnet)
@@ -397,7 +397,7 @@ public class PaperWalletActivity extends AbstractWalletActivity {
         final Network network = getNetwork();
         currentAddress = getAddressForType(currentKey, network, typeIndex);
 
-        // Fixed: use exact current network params, no guess logic
+        // Use exact current network params, no guess logic
         NetworkParameters wifParams = Constants.NETWORK_PARAMETERS;
 
         boolean compressed = true;
