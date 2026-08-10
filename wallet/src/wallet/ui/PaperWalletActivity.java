@@ -1,6 +1,6 @@
 /*
  * Copyright 2011-2024 Andreas Schildbach and the Bitcoin Wallet contributors
- * Copyright 2024-2026 Buli-Net - v11.04-BASE-BK Fork
+ * Copyright 2026 buli
  *
  * This file is part of Bitcoin Wallet.
  *
@@ -23,6 +23,7 @@
  * - Reason: sweep scanner fails to detect uncompressed P2PKH
  * - Retained: Legacy Compressed P2PKH (K/L... -> 1...) and Native SegWit P2WPKH (bc1q...)
  * - All generated keys are now forced to compressed = true
+ * - Fixed network detection: separate Signet from Testnet, use exact network params for WIF
  */
 
 package wallet.ui;
@@ -261,7 +262,7 @@ public class PaperWalletActivity extends AbstractWalletActivity {
     }
 
     // -----------------------------------------------------------------
-    // NETWORK DETECTION - Determines Mainnet/Testnet/Regtest
+    // NETWORK DETECTION - Fixed: separate Signet, return correct network
     // -----------------------------------------------------------------
     private Network getNetwork() {
         NetworkParameters params = Constants.NETWORK_PARAMETERS;
@@ -269,7 +270,10 @@ public class PaperWalletActivity extends AbstractWalletActivity {
         if (id.contains("regtest")) {
             return BitcoinNetwork.REGTEST;
         }
-        if (id.contains("test") || id.contains("signet")) {
+        if (id.contains("signet")) {
+            return BitcoinNetwork.SIGNET;
+        }
+        if (id.contains("test")) {
             return BitcoinNetwork.TESTNET;
         }
         return BitcoinNetwork.MAINNET;
@@ -338,13 +342,10 @@ public class PaperWalletActivity extends AbstractWalletActivity {
         currentAddress = getAddressForType(currentKey, network, typeIndex);
         currentPubKeyHex = currentKey.getPublicKeyAsHex();
 
-        // Determine WIF network parameters
-        NetworkParameters params = Constants.NETWORK_PARAMETERS;
-        String id = params.getId().toLowerCase();
-        boolean isTestOrSignet = id.contains("test") || id.contains("signet");
-        NetworkParameters wifParams = isTestOrSignet? TestNet3Params.get() : params;
+        // Fixed: use exact current network params, no guess logic
+        NetworkParameters wifParams = Constants.NETWORK_PARAMETERS;
 
-        // Force compressed WIF (starts with K or L on mainnet)
+        // Force compressed WIF (starts with K/L on mainnet, c on testnet)
         boolean compressed = true;
         ECKey wifKey = ECKey.fromPrivate(currentKey.getPrivKey(), compressed);
         currentPrivKeyWif = wifKey.getPrivateKeyEncoded(wifParams).toBase58();
@@ -396,10 +397,8 @@ public class PaperWalletActivity extends AbstractWalletActivity {
         final Network network = getNetwork();
         currentAddress = getAddressForType(currentKey, network, typeIndex);
 
-        NetworkParameters params = Constants.NETWORK_PARAMETERS;
-        String id = params.getId().toLowerCase();
-        boolean isTestOrSignet = id.contains("test") || id.contains("signet");
-        NetworkParameters wifParams = isTestOrSignet? TestNet3Params.get() : params;
+        // Fixed: use exact current network params, no guess logic
+        NetworkParameters wifParams = Constants.NETWORK_PARAMETERS;
 
         boolean compressed = true;
         ECKey wifKey = ECKey.fromPrivate(currentKey.getPrivKey(), compressed);
