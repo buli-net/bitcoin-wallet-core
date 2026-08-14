@@ -52,6 +52,7 @@ import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.ViewModelProvider;
 import com.google.common.primitives.Floats;
 import org.bitcoinj.base.ScriptType;
+import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.EncodedPrivateKey;
@@ -159,7 +160,6 @@ public final class WalletActivity extends AbstractWalletActivity {
         exchangeRatesFragment = findViewById(R.id.wallet_main_twopanes_exchange_rates);
         levitateView = contentView.findViewWithTag("levitate");
 
-        // Make view tagged with 'levitate' scroll away and quickly return.
         if (levitateView != null) {
             final CoordinatorLayout.LayoutParams layoutParams = new CoordinatorLayout.LayoutParams(
                     levitateView.getLayoutParams().width, levitateView.getLayoutParams().height);
@@ -260,6 +260,11 @@ public final class WalletActivity extends AbstractWalletActivity {
                         && res.getBoolean(R.bool.show_exchange_rates_option);
                 menu.findItem(R.id.wallet_options_exchange_rates).setVisible(showExchangeRatesOption);
                 menu.findItem(R.id.wallet_options_sweep_wallet).setVisible(Constants.ENABLE_SWEEP_WALLET);
+
+                // === ✅ LOGIC MỚI: CHỈ HIỆN TRÊN MAINNET ===
+                // ẨN trên Testnet / Signet / Regtest
+                menu.findItem(R.id.wallet_options_donate).setVisible(Constants.NETWORK == Constants.Network.MAINNET);
+
                 final String externalStorageState = Environment.getExternalStorageState();
                 final boolean enableRestoreWalletOption = Environment.MEDIA_MOUNTED.equals(externalStorageState)
                         || Environment.MEDIA_MOUNTED_READ_ONLY.equals(externalStorageState);
@@ -308,7 +313,7 @@ public final class WalletActivity extends AbstractWalletActivity {
                     startActivity(new Intent(WalletActivity.this, wallet.ui.PaperWalletActivity.class));
                     return true;
                     //end create paper wallet
-                    
+
                 } else if (itemId == R.id.wallet_options_network_monitor) {
                     startActivity(new Intent(WalletActivity.this, NetworkMonitorActivity.class));
                     return true;
@@ -333,6 +338,10 @@ public final class WalletActivity extends AbstractWalletActivity {
                 } else if (itemId == R.id.wallet_options_report_issue) {
                     viewModel.showReportIssueDialog.setValue(Event.simple());
                     return true;
+                } else if (itemId == R.id.wallet_options_donate) {
+                    // === ✅ XỬ LÝ NHẤN NÚT DONATE - GIỮ NGUYÊN LOGIC GỐC ===
+                    handleDonate();
+                    return true;
                 } else if (itemId == R.id.wallet_options_help) {
                     viewModel.showHelpDialog.setValue(new Event<>(R.string.help_wallet));
                     return true;
@@ -354,7 +363,6 @@ public final class WalletActivity extends AbstractWalletActivity {
             exchangeRatesFragment.setVisibility(config.isEnableExchangeRates() ? View.VISIBLE : View.GONE);
 
         handler.postDelayed(() -> {
-            // delayed start so that UI has enough time to initialize
             BlockchainService.start(WalletActivity.this, true);
         }, 1000);
     }
@@ -362,7 +370,6 @@ public final class WalletActivity extends AbstractWalletActivity {
     @Override
     protected void onPause() {
         handler.removeCallbacksAndMessages(null);
-
         super.onPause();
     }
 
@@ -379,8 +386,7 @@ public final class WalletActivity extends AbstractWalletActivity {
             final ValueAnimator slide = ValueAnimator.ofFloat(-1.0f, 0.0f);
             slide.addUpdateListener(animator -> {
                 float animatedValue = (float) animator.getAnimatedValue();
-                slideInLeftView.setTranslationX(
-                        animatedValue * (slideInLeftView.getWidth() + slideInLeftView.getPaddingLeft()));
+                slideInLeftView.setTranslationX(animatedValue * (slideInLeftView.getWidth() + slideInLeftView.getPaddingLeft()));
             });
             slide.setInterpolator(new DecelerateInterpolator());
             slide.setDuration(duration);
@@ -395,8 +401,7 @@ public final class WalletActivity extends AbstractWalletActivity {
             final ValueAnimator slide = ValueAnimator.ofFloat(1.0f, 0.0f);
             slide.addUpdateListener(animator -> {
                 float animatedValue = (float) animator.getAnimatedValue();
-                slideInRightView.setTranslationX(
-                        animatedValue * (slideInRightView.getWidth() + slideInRightView.getPaddingRight()));
+                slideInRightView.setTranslationX(animatedValue * (slideInRightView.getWidth() + slideInRightView.getPaddingRight()));
             });
             slide.setInterpolator(new DecelerateInterpolator());
             slide.setDuration(duration);
@@ -411,8 +416,7 @@ public final class WalletActivity extends AbstractWalletActivity {
             final ValueAnimator slide = ValueAnimator.ofFloat(-1.0f, 0.0f);
             slide.addUpdateListener(animator -> {
                 float animatedValue = (float) animator.getAnimatedValue();
-                slideInTopView.setTranslationY(
-                        animatedValue * (slideInTopView.getHeight() + slideInTopView.getPaddingTop()));
+                slideInTopView.setTranslationY(animatedValue * (slideInTopView.getHeight() + slideInTopView.getPaddingTop()));
             });
             slide.setInterpolator(new DecelerateInterpolator());
             slide.setDuration(duration);
@@ -427,8 +431,7 @@ public final class WalletActivity extends AbstractWalletActivity {
             final ValueAnimator slide = ValueAnimator.ofFloat(1.0f, 0.0f);
             slide.addUpdateListener(animator -> {
                 float animatedValue = (float) animator.getAnimatedValue();
-                slideInBottomView.setTranslationY(
-                        animatedValue * (slideInBottomView.getHeight() + slideInBottomView.getPaddingBottom()));
+                slideInBottomView.setTranslationY(animatedValue * (slideInBottomView.getHeight() + slideInBottomView.getPaddingBottom()));
             });
             slide.setInterpolator(new DecelerateInterpolator());
             slide.setDuration(duration);
@@ -439,8 +442,7 @@ public final class WalletActivity extends AbstractWalletActivity {
         }
 
         if (levitateView != null) {
-            final ObjectAnimator elevate = ObjectAnimator.ofFloat(levitateView, "elevation", 0.0f,
-                    levitateView.getElevation());
+            final ObjectAnimator elevate = ObjectAnimator.ofFloat(levitateView, "elevation", 0.0f, levitateView.getElevation());
             elevate.setDuration(duration);
             fragmentEnterAnimationBuilder.before(elevate);
             final Drawable levitateBackground = levitateView.getBackground();
@@ -460,19 +462,15 @@ public final class WalletActivity extends AbstractWalletActivity {
 
     private void handleIntent(final Intent intent) {
         final String action = intent.getAction();
-
         if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)) {
             final String inputType = intent.getType();
-            final NdefMessage ndefMessage = (NdefMessage) intent
-                    .getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES)[0];
+            final NdefMessage ndefMessage = (NdefMessage) intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES)[0];
             final byte[] input = Nfc.extractMimePayload(Constants.MIMETYPE_TRANSACTION, ndefMessage);
-
             new BinaryInputParser(inputType, input) {
                 @Override
                 protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
                     cannotClassify(inputType);
                 }
-
                 @Override
                 protected void error(final int messageResId, final Object... messageArgs) {
                     final DialogBuilder dialog = DialogBuilder.dialog(WalletActivity.this, 0, messageResId, messageArgs);
@@ -492,15 +490,24 @@ public final class WalletActivity extends AbstractWalletActivity {
     }
 
     public void handleScan(final View clickView) {
-        // The animation must be ended because of several graphical glitching that happens when the
-        // Camera/SurfaceView is used while the animation is running.
         enterAnimation.end();
         if (clickView != null) {
-            final ActivityOptionsCompat options = ActivityOptionsCompat.makeClipRevealAnimation(clickView, 0, 0,
-                    clickView.getWidth(), clickView.getHeight());
+            final ActivityOptionsCompat options = ActivityOptionsCompat.makeClipRevealAnimation(clickView, 0, 0, clickView.getWidth(), clickView.getHeight());
             scanLauncher.launch(null, options);
         } else {
             scanLauncher.launch(null);
+        }
+    }
+
+    // === ✅ HÀM XỬ LÝ DONATE LẤY NGUYÊN TỪ FILE CŨ ===
+    private void handleDonate() {
+        try {
+            SendCoinsActivity.start(this, PaymentIntent.fromAddress(
+                Constants.DONATION_ADDRESS,
+                getString(R.string.wallet_donate_address_label)
+            ));
+        } catch (final AddressFormatException x) {
+            throw new RuntimeException(x);
         }
     }
 
@@ -510,11 +517,9 @@ public final class WalletActivity extends AbstractWalletActivity {
                 final View directTargetChild, final View target, final int nestedScrollAxes, final int type) {
             return (nestedScrollAxes & ViewCompat.SCROLL_AXIS_VERTICAL) != 0;
         }
-
         @Override
         public void onNestedScroll(final CoordinatorLayout coordinatorLayout, final View child, final View target,
-                final int dxConsumed, final int dyConsumed, final int dxUnconsumed, final int dyUnconsumed,
-                final int type) {
+                final int dxConsumed, final int dyConsumed, final int dxUnconsumed, final int dyUnconsumed, final int type) {
             child.setTranslationY(Floats.constrainToRange(child.getTranslationY() - dyConsumed, -child.getHeight(), 0));
         }
     }
