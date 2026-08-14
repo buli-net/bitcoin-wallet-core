@@ -91,10 +91,10 @@
         android:orderInCategory="999"
         android:showAsAction="never"
         android:title="@string/button_help" />
-<!-- donate -->
-    <item
+   <!-- donate -->
+<item
     android:id="@+id/wallet_options_donate"
     android:title="@string/wallet_options_donate"
-    app:showAsAction="never" />
+    android:showAsAction="never" />
 
 </menu>
