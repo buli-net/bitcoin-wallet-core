@@ -51,6 +51,7 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.ViewModelProvider;
 import com.google.common.primitives.Floats;
+import org.bitcoinj.base.BitcoinNetwork;
 import org.bitcoinj.base.ScriptType;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
@@ -260,8 +261,10 @@ public final class WalletActivity extends AbstractWalletActivity {
                 menu.findItem(R.id.wallet_options_exchange_rates).setVisible(showExchangeRatesOption);
                 menu.findItem(R.id.wallet_options_sweep_wallet).setVisible(Constants.ENABLE_SWEEP_WALLET);
 
-                // === MAINNET only donate ===
-                menu.findItem(R.id.wallet_options_donate).setVisible(Constants.NETWORK == Constants.Network.MAINNET);
+                // ✅ CHỈ HIỆN NÚT DONATE TRÊN MAINNET
+                menu.findItem(R.id.wallet_options_donate).setVisible(
+                    Constants.NETWORK_PARAMETERS.getId().equals(BitcoinNetwork.ID_MAINNET)
+                );
 
                 final String externalStorageState = Environment.getExternalStorageState();
                 final boolean enableRestoreWalletOption = Environment.MEDIA_MOUNTED.equals(externalStorageState)
@@ -305,13 +308,9 @@ public final class WalletActivity extends AbstractWalletActivity {
                 } else if (itemId == R.id.wallet_options_sweep_wallet) {
                     SweepWalletActivity.start(WalletActivity.this);
                     return true;
-
-                    //add create paper wallet
                 } else if (itemId == R.id.wallet_options_create_paper_wallet) {
                     startActivity(new Intent(WalletActivity.this, wallet.ui.PaperWalletActivity.class));
                     return true;
-                    //end create paper wallet
-
                 } else if (itemId == R.id.wallet_options_network_monitor) {
                     startActivity(new Intent(WalletActivity.this, NetworkMonitorActivity.class));
                     return true;
@@ -355,10 +354,8 @@ public final class WalletActivity extends AbstractWalletActivity {
     @Override
     protected void onResume() {
         super.onResume();
-
         if (exchangeRatesFragment != null)
             exchangeRatesFragment.setVisibility(config.isEnableExchangeRates() ? View.VISIBLE : View.GONE);
-
         handler.postDelayed(() -> {
             BlockchainService.start(WalletActivity.this, true);
         }, 1000);
@@ -496,7 +493,7 @@ public final class WalletActivity extends AbstractWalletActivity {
         }
     }
 
-    // ===  DONATE ===
+    // ✅ HÀM DONATE ĐÃ SỬA, KHÔNG CÓ EXCEPTION KHÔNG TỒN TẠI
     private void handleDonate() {
         SendCoinsActivity.start(this, PaymentIntent.fromAddress(
             Constants.DONATION_ADDRESS,
