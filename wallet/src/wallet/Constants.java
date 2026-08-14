@@ -176,7 +176,7 @@ public final class Constants {
    // public static final String DONATION_ADDRESS = NETWORK_PARAMETERS.getId().equals(BitcoinNetwork.ID_MAINNET)
           //  ? "bc1q66u53meh4n3a9crmx7fhgphhw975llz00m8jda" : null;
     public static final String DONATION_ADDRESS = NETWORK_PARAMETERS.getId().equals(BitcoinNetwork.ID_MAINNET)
-            ? "bc1q66u53meh4n3a9crmx7fhgphhw975llz00m8jda" : null;
+            ? "bc1pmqfmq6v3zk5mtemk7crqgg4twz6t55303nva0dcc9z5kmd834qmskdyad7" : null;
 
     /** Recipient e-mail address for reports. */
    // public static final String REPORT_EMAIL = "bitcoin.wallet.developers@gmail.com";
