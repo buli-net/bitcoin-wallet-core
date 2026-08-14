@@ -458,7 +458,7 @@
 <string name="paper_wallet_options_export">Export TXT</string>
 
 <!-- donate -->
-<string name="wallet_options_donate">Donate</string>
+
 <string name="wallet_donate_address_label">Donate for dev</string>
 
     
