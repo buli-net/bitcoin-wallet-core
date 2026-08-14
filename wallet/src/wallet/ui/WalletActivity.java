@@ -52,7 +52,6 @@ import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.ViewModelProvider;
 import com.google.common.primitives.Floats;
 import org.bitcoinj.base.ScriptType;
-import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.EncodedPrivateKey;
@@ -261,8 +260,7 @@ public final class WalletActivity extends AbstractWalletActivity {
                 menu.findItem(R.id.wallet_options_exchange_rates).setVisible(showExchangeRatesOption);
                 menu.findItem(R.id.wallet_options_sweep_wallet).setVisible(Constants.ENABLE_SWEEP_WALLET);
 
-                // === ✅ LOGIC MỚI: CHỈ HIỆN TRÊN MAINNET ===
-                // ẨN trên Testnet / Signet / Regtest
+                // === MAINNET only donate ===
                 menu.findItem(R.id.wallet_options_donate).setVisible(Constants.NETWORK == Constants.Network.MAINNET);
 
                 final String externalStorageState = Environment.getExternalStorageState();
@@ -339,7 +337,6 @@ public final class WalletActivity extends AbstractWalletActivity {
                     viewModel.showReportIssueDialog.setValue(Event.simple());
                     return true;
                 } else if (itemId == R.id.wallet_options_donate) {
-                    // === ✅ XỬ LÝ NHẤN NÚT DONATE - GIỮ NGUYÊN LOGIC GỐC ===
                     handleDonate();
                     return true;
                 } else if (itemId == R.id.wallet_options_help) {
@@ -499,16 +496,12 @@ public final class WalletActivity extends AbstractWalletActivity {
         }
     }
 
-    // === ✅ HÀM XỬ LÝ DONATE LẤY NGUYÊN TỪ FILE CŨ ===
+    // ===  DONATE ===
     private void handleDonate() {
-        try {
-            SendCoinsActivity.start(this, PaymentIntent.fromAddress(
-                Constants.DONATION_ADDRESS,
-                getString(R.string.wallet_donate_address_label)
-            ));
-        } catch (final AddressFormatException x) {
-            throw new RuntimeException(x);
-        }
+        SendCoinsActivity.start(this, PaymentIntent.fromAddress(
+            Constants.DONATION_ADDRESS,
+            getString(R.string.wallet_donate_address_label)
+        ));
     }
 
     private static final class QuickReturnBehavior extends CoordinatorLayout.Behavior<View> {
