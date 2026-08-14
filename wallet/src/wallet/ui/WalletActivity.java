@@ -337,14 +337,14 @@ public final class WalletActivity extends AbstractWalletActivity {
                 } else if (itemId == R.id.wallet_options_report_issue) {
                     viewModel.showReportIssueDialog.setValue(Event.simple());
                     return true;
-            // donate 2/3
+                } else if (itemId == R.id.wallet_options_help) {
+                    viewModel.showHelpDialog.setValue(new Event<>(R.string.help_wallet));
+                    return true;
+          // donate 2/3
                 } else if (itemId == R.id.wallet_options_donate) {
                     handleDonate();
                     return true;
             //end donate 2/3
-                } else if (itemId == R.id.wallet_options_help) {
-                    viewModel.showHelpDialog.setValue(new Event<>(R.string.help_wallet));
-                    return true;
                 }
                 return false;
             }
