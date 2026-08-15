@@ -260,7 +260,6 @@ public final class WalletActivity extends AbstractWalletActivity {
                         && res.getBoolean(R.bool.show_exchange_rates_option);
                 menu.findItem(R.id.wallet_options_exchange_rates).setVisible(showExchangeRatesOption);
                 menu.findItem(R.id.wallet_options_sweep_wallet).setVisible(Constants.ENABLE_SWEEP_WALLET);
-
            // donate 1/3
                 menu.findItem(R.id.wallet_options_donate).setVisible(
                     Constants.NETWORK_PARAMETERS.getId().equals(BitcoinNetwork.ID_MAINNET)
