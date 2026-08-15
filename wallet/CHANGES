@@ -39,7 +39,7 @@
 - Add code file wallet/res/xml/file_provider.xml [ add code line 9-->13 ]
 - Add code file wallet/AndroidManifest.xml [add code line 91-->98]
 - Add code file wallet/res/values/strings.xml [add code line 383 --> 458]
-- Add code file wallet/src/wallet/ui/WalletActivity.java [ add code line 306--> 310]
+- Add code file wallet/src/wallet/ui/WalletActivity.java [ add code line 311--> 315]
 - Add code file wallet/res/menu/wallet_options.xml [add code line 71-->76]
 
 =====================================================================
