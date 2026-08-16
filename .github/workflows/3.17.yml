@@ -4,19 +4,22 @@ env:
   SKIP_JDK_VERSION_CHECK: "true"
 
 on:
-  workflow_dispatch: # Chỉ chạy thủ công, không tự động chạy
+  workflow_dispatch:
 
 jobs:
   build:
     name: Build APK v3.17
     runs-on: ubuntu-latest
     steps:
-      - name: Lấy mã nguồn
+      - name: Lấy mã nguồn (toàn bộ lịch sử)
         uses: actions/checkout@v4
         with:
-          ref: 982c631 # Commit bản 3.17 bạn đang dùng
+          repository: buli-net/test-B-Wallet
+          ref: 982c631
+          fetch-depth: 0  # Quan trọng: lấy toàn bộ lịch sử để checkout commit bất kỳ
+          submodules: false
 
-      - name: Cài đặt Java 8 (bản 3.17 yêu cầu đúng JDK 8)
+      - name: Cài đặt Java 8
         uses: actions/setup-java@v4
         with:
           java-version: '8'
@@ -28,7 +31,6 @@ jobs:
           cmdline-tools-version: 5.0
           accept-android-sdk-licenses: true
           packages: tools platform-tools build-tools;26.0.3 platforms;android-26
-          log-accepted-android-sdk-licenses: true
 
       - name: Cấp quyền thực thi
         run: |
