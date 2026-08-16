@@ -45,18 +45,17 @@ jobs:
           java-version: '8'
           distribution: 'zulu'
 
-      - name: Tải và cài đặt bitcoinj 0.10.1 vào local Maven repo
+      - name: Clone và build bitcoinj 0.10.1 từ mã nguồn
         run: |
-          # Tải bitcoinj 0.10.1 từ GitHub releases
-          wget -q https://github.com/bitcoinj/bitcoinj/releases/download/v0.10.1/bitcoinj-0.10.1.jar -O bitcoinj-0.10.1.jar
+          # Clone bitcoinj, checkout tag v0.10.1
+          git clone --depth 1 --branch v0.10.1 https://github.com/bitcoinj/bitcoinj.git /tmp/bitcoinj
           
-          # Cài vào local Maven repository với đúng groupId:artifactId:version
-          mvn install:install-file \
-            -Dfile=bitcoinj-0.10.1.jar \
-            -DgroupId=com.google \
-            -DartifactId=bitcoinj \
-            -Dversion=0.10.1 \
-            -Dpackaging=jar
+          # Build và cài vào local Maven repo
+          cd /tmp/bitcoinj
+          mvn clean install -DskipTests --batch-mode --no-transfer-progress
+          
+          # Quay lại thư mục làm việc
+          cd $GITHUB_WORKSPACE
 
       - name: Biên dịch toàn bộ dự án bằng Maven
         run: mvn clean install --batch-mode --no-transfer-progress
