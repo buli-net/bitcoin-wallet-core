@@ -41,34 +41,26 @@ jobs:
             "build-tools;26.0.3" \
             "platforms;android-26"
 
-      - name: Tải sdklib 22.0.2 + tạo script apkbuilder
+      - name: Tạo script apkbuilder giả (chỉ tạo file rỗng để Maven tiếp tục)
         run: |
-          mkdir -p /opt/android-tools-legacy
-          wget -q https://repo1.maven.org/maven2/com/android/tools/sdklib/22.0.2/sdklib-22.0.2.jar -O /opt/android-tools-legacy/sdklib-22.0.2.jar
-          wget -q https://repo1.maven.org/maven2/com/android/tools/common/22.0.2/common-22.0.2.jar -O /opt/android-tools-legacy/common-22.0.2.jar
-          wget -q https://repo1.maven.org/maven2/com/android/tools/build/builder/0.4.2/builder-0.4.2.jar -O /opt/android-tools-legacy/builder-0.4.2.jar
-          wget -q https://repo1.maven.org/maven2/com/google/guava/guava/13.0.1/guava-13.0.1.jar -O /opt/android-tools-legacy/guava-13.0.1.jar
-          wget -q https://repo1.maven.org/maven2/org/apache/httpcomponents/httpclient/4.1.1/httpclient-4.1.1.jar -O /opt/android-tools-legacy/httpclient-4.1.1.jar
-          wget -q https://repo1.maven.org/maven2/org/apache/httpcomponents/httpcore/4.1/httpcore-4.1.jar -O /opt/android-tools-legacy/httpcore-4.1.jar
-          wget -q https://repo1.maven.org/maven2/commons-logging/commons-logging/1.1.1/commons-logging-1.1.1.jar -O /opt/android-tools-legacy/commons-logging-1.1.1.jar
-          wget -q https://repo1.maven.org/maven2/commons-codec/commons-codec/1.4/commons-codec-1.4.jar -O /opt/android-tools-legacy/commons-codec-1.4.jar
-          
-          # Tạo script apkbuilder với debug output
           cat > $ANDROID_HOME/tools/apkbuilder << 'APKBUILDER_EOF'
           #!/bin/bash
-          LEGACY_LIBS="/opt/android-tools-legacy"
-          CLASSPATH="$LEGACY_LIBS/sdklib-22.0.2.jar:$LEGACY_LIBS/common-22.0.2.jar:$LEGACY_LIBS/builder-0.4.2.jar:$LEGACY_LIBS/guava-13.0.1.jar:$LEGACY_LIBS/httpclient-4.1.1.jar:$LEGACY_LIBS/httpcore-4.1.jar:$LEGACY_LIBS/commons-logging-1.1.1.jar:$LEGACY_LIBS/commons-codec-1.4.jar"
-          echo "=== APKBUILDER DEBUG ===" >&2
-          echo "Args: $@" >&2
-          echo "Java: $(java -version 2>&1)" >&2
-          exec java -classpath "$CLASSPATH" com.android.sdklib.build.ApkBuilderMain "$@"
+          # Script giả: tạo file APK rỗng để Maven không dừng lại
+          # Chúng ta sẽ đóng gói APK thật sau bằng tay
+          OUTPUT_APK=""
+          while [[ $# -gt 0 ]]; do
+            case "$1" in
+              /*.apk) OUTPUT_APK="$1"; shift;;
+              *) shift;;
+            esac
+          done
+          if [ -n "$OUTPUT_APK" ]; then
+            touch "$OUTPUT_APK"
+            echo "apkbuilder (fake): created placeholder $OUTPUT_APK" >&2
+          fi
+          exit 0
           APKBUILDER_EOF
-          
           chmod +x $ANDROID_HOME/tools/apkbuilder
-          
-          # Test script xem có chạy được không
-          echo "=== Test apkbuilder ==="
-          $ANDROID_HOME/tools/apkbuilder --help 2>&1 || true
 
       - name: Chuyển về Java 8 (cho biên dịch dự án)
         uses: actions/setup-java@v4
@@ -121,17 +113,63 @@ jobs:
           mvn clean install -DskipTests -q
           cd $GITHUB_WORKSPACE
 
-      - name: Biên dịch toàn bộ dự án (với debug)
-        run: mvn clean install -e -X 2>&1 | tail -200
+      - name: Biên dịch dự án (tạo resources + dex)
+        run: mvn clean install -q
 
-      - name: Tìm file APK đã tạo
+      - name: Kiểm tra file trung gian
+        run: |
+          echo "=== File trong wallet/target ==="
+          ls -la wallet/target/
+          echo ""
+          echo "=== Kiểm tra .ap_ và classes.dex ==="
+          ls -la wallet/target/*.ap_ wallet/target/classes.dex 2>/dev/null || true
+
+      - name: Đóng gói APK thủ công bằng aapt
+        run: |
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/26.0.3"
+          AAPT="$BUILD_TOOLS/aapt"
+          APK_INPUT="wallet/target/wallet-3.17-test.ap_"
+          DEX_FILE="wallet/target/classes.dex"
+          FINAL_APK="wallet/target/wallet-3.17-test.apk"
+          
+          # Kiểm tra file đầu vào
+          if [ ! -f "$APK_INPUT" ]; then
+            echo "ERROR: File .ap_ không tồn tại!"
+            exit 1
+          fi
+          if [ ! -f "$DEX_FILE" ]; then
+            echo "ERROR: classes.dex không tồn tại!"
+            exit 1
+          fi
+          
+          # Sao chép .ap_ thành .apk (file .ap_ là ZIP chứa resources + manifest)
+          cp "$APK_INPUT" "$FINAL_APK"
+          
+          # Thêm classes.dex vào APK bằng aapt
+          $AAPT add "$FINAL_APK" "$DEX_FILE"
+          
+          # Thêm các thư viện jar vào APK (nếu cần)
+          # Tìm và thêm các file jar cần thiết
+          for jar in $(find wallet/target -name "*.jar" -type f 2>/dev/null); do
+            echo "Thêm $jar vào APK..."
+            $AAPT add "$FINAL_APK" "$jar" || true
+          done
+          
+          echo ""
+          echo "=== Kết quả ==="
+          ls -la "$FINAL_APK"
+          echo ""
+          echo "=== Kiểm tra nội dung APK ==="
+          $AAPT list "$FINAL_APK" | head -20
+
+      - name: Tìm file APK cuối cùng
         run: |
           echo "=== Tìm tất cả file .apk ==="
-          find . -name "*.apk" -type f
+          find . -name "*.apk" -type f -size +0k
 
       - name: Lưu APK ra kết quả
         uses: actions/upload-artifact@v4
         with:
           name: Bitcoin-Wallet-v3.17-APK
-          path: "**/*.apk"
+          path: "wallet/target/wallet-3.17-test.apk"
           retention-days: 7
