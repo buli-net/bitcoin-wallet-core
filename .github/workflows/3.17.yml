@@ -41,28 +41,34 @@ jobs:
             "build-tools;26.0.3" \
             "platforms;android-26"
 
-      - name: Tải sdklib 22.0.2 + tạo script apkbuilder tương thích
+      - name: Tải sdklib 22.0.2 + tạo script apkbuilder
         run: |
-          # Tải sdklib.jar phiên bản 22.0.2 (năm 2013, có ApkBuilderMain)
           mkdir -p /opt/android-tools-legacy
           wget -q https://repo1.maven.org/maven2/com/android/tools/sdklib/22.0.2/sdklib-22.0.2.jar -O /opt/android-tools-legacy/sdklib-22.0.2.jar
-          
-          # Tải các dependency cần thiết cho sdklib 22.0.2
           wget -q https://repo1.maven.org/maven2/com/android/tools/common/22.0.2/common-22.0.2.jar -O /opt/android-tools-legacy/common-22.0.2.jar
           wget -q https://repo1.maven.org/maven2/com/android/tools/build/builder/0.4.2/builder-0.4.2.jar -O /opt/android-tools-legacy/builder-0.4.2.jar
           wget -q https://repo1.maven.org/maven2/com/google/guava/guava/13.0.1/guava-13.0.1.jar -O /opt/android-tools-legacy/guava-13.0.1.jar
+          wget -q https://repo1.maven.org/maven2/org/apache/httpcomponents/httpclient/4.1.1/httpclient-4.1.1.jar -O /opt/android-tools-legacy/httpclient-4.1.1.jar
+          wget -q https://repo1.maven.org/maven2/org/apache/httpcomponents/httpcore/4.1/httpcore-4.1.jar -O /opt/android-tools-legacy/httpcore-4.1.jar
+          wget -q https://repo1.maven.org/maven2/commons-logging/commons-logging/1.1.1/commons-logging-1.1.1.jar -O /opt/android-tools-legacy/commons-logging-1.1.1.jar
+          wget -q https://repo1.maven.org/maven2/commons-codec/commons-codec/1.4/commons-codec-1.4.jar -O /opt/android-tools-legacy/commons-codec-1.4.jar
           
-          # Tạo script apkbuilder
+          # Tạo script apkbuilder với debug output
           cat > $ANDROID_HOME/tools/apkbuilder << 'APKBUILDER_EOF'
           #!/bin/bash
           LEGACY_LIBS="/opt/android-tools-legacy"
-          CLASSPATH="$LEGACY_LIBS/sdklib-22.0.2.jar:$LEGACY_LIBS/common-22.0.2.jar:$LEGACY_LIBS/builder-0.4.2.jar:$LEGACY_LIBS/guava-13.0.1.jar"
+          CLASSPATH="$LEGACY_LIBS/sdklib-22.0.2.jar:$LEGACY_LIBS/common-22.0.2.jar:$LEGACY_LIBS/builder-0.4.2.jar:$LEGACY_LIBS/guava-13.0.1.jar:$LEGACY_LIBS/httpclient-4.1.1.jar:$LEGACY_LIBS/httpcore-4.1.jar:$LEGACY_LIBS/commons-logging-1.1.1.jar:$LEGACY_LIBS/commons-codec-1.4.jar"
+          echo "=== APKBUILDER DEBUG ===" >&2
+          echo "Args: $@" >&2
+          echo "Java: $(java -version 2>&1)" >&2
           exec java -classpath "$CLASSPATH" com.android.sdklib.build.ApkBuilderMain "$@"
           APKBUILDER_EOF
           
           chmod +x $ANDROID_HOME/tools/apkbuilder
-          echo "=== apkbuilder đã tạo ==="
-          ls -la $ANDROID_HOME/tools/apkbuilder
+          
+          # Test script xem có chạy được không
+          echo "=== Test apkbuilder ==="
+          $ANDROID_HOME/tools/apkbuilder --help 2>&1 || true
 
       - name: Chuyển về Java 8 (cho biên dịch dự án)
         uses: actions/setup-java@v4
@@ -115,8 +121,8 @@ jobs:
           mvn clean install -DskipTests -q
           cd $GITHUB_WORKSPACE
 
-      - name: Biên dịch toàn bộ dự án
-        run: mvn clean install -q
+      - name: Biên dịch toàn bộ dự án (với debug)
+        run: mvn clean install -e -X 2>&1 | tail -200
 
       - name: Tìm file APK đã tạo
         run: |
