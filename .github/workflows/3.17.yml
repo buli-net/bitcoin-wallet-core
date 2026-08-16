@@ -39,14 +39,13 @@ jobs:
             "tools" \
             "platform-tools" \
             "build-tools;26.0.3" \
-            "platforms;android-26"
+            "platforms;android-26" \
+            "platforms;android-10"  # Thêm cho an toàn
 
-      - name: Tạo script apkbuilder giả (chỉ tạo file rỗng để Maven tiếp tục)
+      - name: Tạo script apkbuilder giả
         run: |
           cat > $ANDROID_HOME/tools/apkbuilder << 'APKBUILDER_EOF'
           #!/bin/bash
-          # Script giả: tạo file APK rỗng để Maven không dừng lại
-          # Chúng ta sẽ đóng gói APK thật sau bằng tay
           OUTPUT_APK=""
           while [[ $# -gt 0 ]]; do
             case "$1" in
@@ -62,7 +61,7 @@ jobs:
           APKBUILDER_EOF
           chmod +x $ANDROID_HOME/tools/apkbuilder
 
-      - name: Chuyển về Java 8 (cho biên dịch dự án)
+      - name: Chuyển về Java 8
         uses: actions/setup-java@v4
         with:
           java-version: '8'
@@ -113,8 +112,10 @@ jobs:
           mvn clean install -DskipTests -q
           cd $GITHUB_WORKSPACE
 
-      - name: Biên dịch dự án (tạo resources + dex)
-        run: mvn clean install -q
+      - name: Build base + integration-android + wallet (bỏ qua sample)
+        run: |
+          # Build các mô-đun cần thiết, bỏ qua sample-integration-android
+          mvn clean install -pl :base,:integration-android,:wallet -am -q
 
       - name: Kiểm tra file trung gian
         run: |
@@ -132,7 +133,6 @@ jobs:
           DEX_FILE="wallet/target/classes.dex"
           FINAL_APK="wallet/target/wallet-3.17-test.apk"
           
-          # Kiểm tra file đầu vào
           if [ ! -f "$APK_INPUT" ]; then
             echo "ERROR: File .ap_ không tồn tại!"
             exit 1
@@ -142,25 +142,18 @@ jobs:
             exit 1
           fi
           
-          # Sao chép .ap_ thành .apk (file .ap_ là ZIP chứa resources + manifest)
+          # Sao chép .ap_ thành .apk
           cp "$APK_INPUT" "$FINAL_APK"
           
-          # Thêm classes.dex vào APK bằng aapt
+          # Thêm classes.dex vào APK
           $AAPT add "$FINAL_APK" "$DEX_FILE"
-          
-          # Thêm các thư viện jar vào APK (nếu cần)
-          # Tìm và thêm các file jar cần thiết
-          for jar in $(find wallet/target -name "*.jar" -type f 2>/dev/null); do
-            echo "Thêm $jar vào APK..."
-            $AAPT add "$FINAL_APK" "$jar" || true
-          done
           
           echo ""
           echo "=== Kết quả ==="
           ls -la "$FINAL_APK"
           echo ""
           echo "=== Kiểm tra nội dung APK ==="
-          $AAPT list "$FINAL_APK" | head -20
+          $AAPT list "$FINAL_APK" | head -30
 
       - name: Tìm file APK cuối cùng
         run: |
