@@ -3,6 +3,8 @@ env:
   ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
   SKIP_JDK_VERSION_CHECK: "true"
   ANDROID_HOME: /usr/local/lib/android/sdk
+  MAVEN_HOME: /opt/maven-3.2.5
+  PATH: /opt/maven-3.2.5/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 on:
   workflow_dispatch:
@@ -45,20 +47,25 @@ jobs:
           java-version: '8'
           distribution: 'zulu'
 
+      - name: Cài đặt Maven 3.2.5 (tương thích android-maven-plugin 3.6.1)
+        run: |
+          # Tải Maven 3.2.5 từ Apache archive
+          wget -q https://archive.apache.org/dist/maven/maven-3/3.2.5/binaries/apache-maven-3.2.5-bin.tar.gz
+          tar -xzf apache-maven-3.2.5-bin.tar.gz -C /opt/
+          mv /opt/apache-maven-3.2.5 /opt/maven-3.2.5
+          
+          # Xác nhận phiên bản
+          mvn --version
+
       - name: Clone và build bitcoinj 0.10.1 từ mã nguồn
         run: |
-          # Clone bitcoinj, checkout tag v0.10.1
           git clone --depth 1 --branch v0.10.1 https://github.com/bitcoinj/bitcoinj.git /tmp/bitcoinj
-          
-          # Build và cài vào local Maven repo
           cd /tmp/bitcoinj
-          mvn clean install -DskipTests --batch-mode --no-transfer-progress
-          
-          # Quay lại thư mục làm việc
+          mvn clean install -DskipTests --batch-mode
           cd $GITHUB_WORKSPACE
 
-      - name: Biên dịch toàn bộ dự án bằng Maven
-        run: mvn clean install --batch-mode --no-transfer-progress
+      - name: Biên dịch toàn bộ dự án bằng Maven 3.2.5
+        run: mvn clean install --batch-mode
 
       - name: Tìm file APK đã tạo
         run: |
