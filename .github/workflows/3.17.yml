@@ -11,13 +11,17 @@ jobs:
     name: Build APK v3.17
     runs-on: ubuntu-latest
     steps:
-      - name: Lấy mã nguồn (toàn bộ lịch sử)
+      - name: Lấy toàn bộ mã nguồn
         uses: actions/checkout@v4
         with:
           repository: buli-net/test-B-Wallet
-          ref: 982c631
-          fetch-depth: 0  # Quan trọng: lấy toàn bộ lịch sử để checkout commit bất kỳ
-          submodules: false
+          fetch-depth: 0  # Lấy toàn bộ lịch sử
+
+      - name: Checkout đúng commit 982c631
+        run: git checkout 982c631
+
+      - name: Xác nhận đã checkout đúng commit
+        run: git log --oneline -1
 
       - name: Cài đặt Java 8
         uses: actions/setup-java@v4
