@@ -23,8 +23,18 @@ jobs:
       - name: Checkout đúng commit 982c631
         run: git checkout 982c631
 
-      - name: Xác nhận commit hiện tại
-        run: git log --oneline -1
+      - name: Nâng targetSdkVersion để tương thích Android 16
+        run: |
+          echo "=== AndroidManifest.xml trước khi sửa ==="
+          grep -n "sdkVersion\|targetSdkVersion\|minSdkVersion" wallet/AndroidManifest.xml
+          
+          # Sửa: giữ minSdkVersion=10, nâng targetSdkVersion lên 33 (Android 13)
+          # và compileSdkVersion tương ứng
+          sed -i 's/android:minSdkVersion="10"/android:minSdkVersion="10" android:targetSdkVersion="33"/g' wallet/AndroidManifest.xml
+          
+          echo ""
+          echo "=== AndroidManifest.xml sau khi sửa ==="
+          grep -n "sdkVersion\|targetSdkVersion\|minSdkVersion" wallet/AndroidManifest.xml
 
       - name: Cài đặt Java 17 (cho sdkmanager)
         uses: actions/setup-java@v4
@@ -39,7 +49,9 @@ jobs:
             "tools" \
             "platform-tools" \
             "build-tools;26.0.3" \
+            "build-tools;33.0.2" \
             "platforms;android-26" \
+            "platforms;android-33" \
             "platforms;android-10"
 
       - name: Tạo script apkbuilder giả
@@ -116,30 +128,28 @@ jobs:
         run: |
           mvn clean install -pl :base,:integration-android,:wallet -am -q
 
-      - name: Kiểm tra file trung gian
+      - name: Đóng gói APK thủ công + ký bằng apksigner (Scheme v2)
         run: |
-          echo "=== File trong wallet/target ==="
-          ls -la wallet/target/
-          echo ""
-          ls -la wallet/target/*.ap_ wallet/target/classes.dex 2>/dev/null || true
-
-      - name: Đóng gói APK thủ công + ký + zipalign
-        run: |
-          BUILD_TOOLS="$ANDROID_HOME/build-tools/26.0.3"
-          AAPT="$BUILD_TOOLS/aapt"
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/33.0.2"
+          AAPT="$ANDROID_HOME/build-tools/26.0.3/aapt"
           ZIPALIGN="$BUILD_TOOLS/zipalign"
+          APK_SIGNER="$BUILD_TOOLS/apksigner"
           APK_INPUT="wallet/target/wallet-3.17-test.ap_"
           DEX_FILE="wallet/target/classes.dex"
-          UNSIGNED_APK="wallet/target/wallet-3.17-test-unsigned.apk"
+          ALIGNED_APK="wallet/target/wallet-3.17-test-aligned.apk"
           SIGNED_APK="wallet/target/wallet-3.17-test.apk"
           
-          # 1. Sao chép .ap_ thành APK chưa ký
-          cp "$APK_INPUT" "$UNSIGNED_APK"
+          # 1. Sao chép .ap_ thành APK
+          cp "$APK_INPUT" "$ALIGNED_APK"
           
           # 2. Thêm classes.dex vào APK
-          $AAPT add "$UNSIGNED_APK" "$DEX_FILE"
+          $AAPT add "$ALIGNED_APK" "$DEX_FILE"
           
-          # 3. Tạo debug keystore (nếu chưa có)
+          # 3. Zipalign trước (bắt buộc cho apksigner)
+          $ZIPALIGN -f -v 4 "$ALIGNED_APK" "${ALIGNED_APK}.tmp"
+          mv "${ALIGNED_APK}.tmp" "$ALIGNED_APK"
+          
+          # 4. Tạo debug keystore
           if [ ! -f ~/.android/debug.keystore ]; then
             mkdir -p ~/.android
             keytool -genkey -v -keystore ~/.android/debug.keystore \
@@ -148,14 +158,15 @@ jobs:
               -dname "CN=Android Debug,O=Android,C=US"
           fi
           
-          # 4. Ký APK bằng jarsigner (với thuật toán tương thích)
-          jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 \
-            -keystore ~/.android/debug.keystore \
-            -storepass android -keypass android \
-            "$UNSIGNED_APK" androiddebugkey
-          
-          # 5. Zipalign APK
-          $ZIPALIGN -f -v 4 "$UNSIGNED_APK" "$SIGNED_APK"
+          # 5. Ký bằng apksigner (hỗ trợ v1 + v2 scheme)
+          $APK_SIGNER sign --ks ~/.android/debug.keystore \
+            --ks-pass pass:android \
+            --key-pass pass:android \
+            --ks-key-alias androiddebugkey \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --out "$SIGNED_APK" \
+            "$ALIGNED_APK"
           
           # 6. Xác minh
           echo ""
@@ -163,7 +174,7 @@ jobs:
           ls -la "$SIGNED_APK"
           echo ""
           echo "=== Xác minh chữ ký ==="
-          jarsigner -verify -verbose -certs "$SIGNED_APK" | head -10
+          $APK_SIGNER verify --verbose "$SIGNED_APK"
 
       - name: Tìm file APK cuối cùng
         run: |
