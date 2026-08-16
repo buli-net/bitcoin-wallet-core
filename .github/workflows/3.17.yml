@@ -23,13 +23,13 @@ jobs:
       - name: Checkout đúng commit 982c631
         run: git checkout 982c631
 
-      - name: Cài đặt Java 17 (cho sdkmanager)
+      - name: Cài đặt Java 17 (cho sdkmanager + apktool)
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'zulu'
 
-      - name: Cài đặt Android SDK (bao gồm cả API 14)
+      - name: Cài đặt Android SDK
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
@@ -38,10 +38,24 @@ jobs:
             "build-tools;26.0.3" \
             "build-tools;33.0.2" \
             "platforms;android-14" \
-            "platforms;android-26"
+            "platforms;android-26" \
+            "platforms;android-33"
           
           echo "=== Platforms đã cài ==="
           ls $ANDROID_HOME/platforms/
+
+      - name: Cài đặt apktool
+        run: |
+          # Tải apktool
+          wget -q https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -O /usr/local/bin/apktool
+          chmod +x /usr/local/bin/apktool
+          
+          # Tải apktool.jar
+          wget -q https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar -O /usr/local/bin/apktool.jar
+          chmod +x /usr/local/bin/apktool.jar
+          
+          # Kiểm tra
+          apktool --version
 
       - name: Tạo script apkbuilder giả
         run: |
@@ -62,7 +76,7 @@ jobs:
           APKBUILDER_EOF
           chmod +x $ANDROID_HOME/tools/apkbuilder
 
-      - name: Chuyển về Java 8
+      - name: Chuyển về Java 8 (cho Maven build)
         uses: actions/setup-java@v4
         with:
           java-version: '8'
@@ -117,30 +131,62 @@ jobs:
         run: |
           mvn clean install -pl :base,:integration-android,:wallet -am -q
 
-      - name: Kiểm tra file trung gian
+      - name: Đóng gói APK ban đầu
         run: |
-          echo "=== File trong wallet/target ==="
-          ls -la wallet/target/
-          echo ""
-          ls -la wallet/target/*.ap_ wallet/target/classes.dex 2>/dev/null || true
-
-      - name: Đóng gói APK + ký bằng apksigner (v1+v2 scheme)
-        run: |
-          BUILD_TOOLS="$ANDROID_HOME/build-tools/33.0.2"
           AAPT="$ANDROID_HOME/build-tools/26.0.3/aapt"
-          ZIPALIGN="$BUILD_TOOLS/zipalign"
-          APK_SIGNER="$BUILD_TOOLS/apksigner"
           APK_INPUT="wallet/target/wallet-3.17-test.ap_"
           DEX_FILE="wallet/target/classes.dex"
-          ALIGNED_APK="wallet/target/wallet-3.17-test-aligned.apk"
+          TEMP_APK="wallet/target/wallet-3.17-test-temp.apk"
+          
+          cp "$APK_INPUT" "$TEMP_APK"
+          $AAPT add "$TEMP_APK" "$DEX_FILE"
+          
+          ls -la "$TEMP_APK"
+
+      - name: Chuyển về Java 17 (cho apktool + apksigner)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'zulu'
+
+      - name: Sửa targetSdkVersion bằng apktool + đóng gói lại
+        run: |
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/33.0.2"
+          ZIPALIGN="$BUILD_TOOLS/zipalign"
+          APK_SIGNER="$BUILD_TOOLS/apksigner"
+          TEMP_APK="wallet/target/wallet-3.17-test-temp.apk"
+          DECODED_DIR="/tmp/wallet-decoded"
+          REALIGNED_APK="wallet/target/wallet-3.17-test-realigned.apk"
           SIGNED_APK="wallet/target/wallet-3.17-test.apk"
           
-          cp "$APK_INPUT" "$ALIGNED_APK"
-          $AAPT add "$ALIGNED_APK" "$DEX_FILE"
+          # 1. Giải nén APK bằng apktool
+          apktool d -f "$TEMP_APK" -o "$DECODED_DIR"
           
-          $ZIPALIGN -f -v 4 "$ALIGNED_APK" "${ALIGNED_APK}.tmp"
-          mv "${ALIGNED_APK}.tmp" "$ALIGNED_APK"
+          # 2. Sửa AndroidManifest.xml: thêm/nâng targetSdkVersion lên 33
+          echo "=== Manifest trước khi sửa ==="
+          grep -n "sdkVersion\|targetSdkVersion\|minSdkVersion" "$DECODED_DIR/AndroidManifest.xml" || true
           
+          # Sử dụng sed để sửa hoặc thêm targetSdkVersion
+          if grep -q "android:targetSdkVersion" "$DECODED_DIR/AndroidManifest.xml"; then
+            # Đã có, sửa giá trị
+            sed -i 's/android:targetSdkVersion="[0-9]*"/android:targetSdkVersion="33"/g' "$DECODED_DIR/AndroidManifest.xml"
+          else
+            # Chưa có, thêm vào sau minSdkVersion
+            sed -i 's/android:minSdkVersion="\([0-9]*\)"/android:minSdkVersion="\1" android:targetSdkVersion="33"/g' "$DECODED_DIR/AndroidManifest.xml"
+          fi
+          
+          echo ""
+          echo "=== Manifest sau khi sửa ==="
+          grep -n "sdkVersion\|targetSdkVersion\|minSdkVersion" "$DECODED_DIR/AndroidManifest.xml"
+          
+          # 3. Đóng gói lại bằng apktool
+          apktool b -f "$DECODED_DIR" -o "$REALIGNED_APK"
+          
+          # 4. Zipalign
+          $ZIPALIGN -f -v 4 "$REALIGNED_APK" "${REALIGNED_APK}.tmp"
+          mv "${REALIGNED_APK}.tmp" "$REALIGNED_APK"
+          
+          # 5. Tạo debug keystore
           if [ ! -f ~/.android/debug.keystore ]; then
             mkdir -p ~/.android
             keytool -genkey -v -keystore ~/.android/debug.keystore \
@@ -149,6 +195,7 @@ jobs:
               -dname "CN=Android Debug,O=Android,C=US"
           fi
           
+          # 6. Ký bằng apksigner (v1 + v2 scheme)
           $APK_SIGNER sign --ks ~/.android/debug.keystore \
             --ks-pass pass:android \
             --key-pass pass:android \
@@ -156,10 +203,11 @@ jobs:
             --v1-signing-enabled true \
             --v2-signing-enabled true \
             --out "$SIGNED_APK" \
-            "$ALIGNED_APK"
+            "$REALIGNED_APK"
           
+          # 7. Xác minh
           echo ""
-          echo "=== Kết quả ==="
+          echo "=== Kết quả cuối cùng ==="
           ls -la "$SIGNED_APK"
           echo ""
           echo "=== Xác minh chữ ký ==="
