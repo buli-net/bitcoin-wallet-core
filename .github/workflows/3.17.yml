@@ -23,6 +23,24 @@ jobs:
       - name: Checkout đúng commit 982c631
         run: git checkout 982c631
 
+      - name: Sửa AndroidManifest.xml thêm targetSdkVersion
+        run: |
+          echo "=== Manifest gốc ==="
+          cat wallet/AndroidManifest.xml
+          echo ""
+          
+          # Thêm android:targetSdkVersion="26" vào thẻ <uses-sdk>
+          # build-tools 26.0.3 hỗ trợ tối đa API 26
+          if grep -q "<uses-sdk" wallet/AndroidManifest.xml; then
+            sed -i 's/<uses-sdk\([^>]*\)>/<uses-sdk\1 android:targetSdkVersion="26">/g' wallet/AndroidManifest.xml
+          else
+            # Thêm thẻ uses-sdk nếu chưa có
+            sed -i 's/<manifest/<manifest android:targetSdkVersion="26"/g' wallet/AndroidManifest.xml
+          fi
+          
+          echo "=== Manifest sau khi sửa ==="
+          cat wallet/AndroidManifest.xml
+
       - name: Cài đặt Java 17
         uses: actions/setup-java@v4
         with:
@@ -38,19 +56,12 @@ jobs:
             "build-tools;26.0.3" \
             "build-tools;33.0.2" \
             "platforms;android-14" \
-            "platforms;android-26" \
-            "platforms;android-33"
+            "platforms;android-26"
           
-          echo "=== Platforms đã cài ==="
+          # Xóa các platform khác để Maven không chọn nhầm
+          rm -rf $ANDROID_HOME/platforms/android-3*
+          echo "=== Platforms còn lại ==="
           ls $ANDROID_HOME/platforms/
-
-      - name: Cài đặt apktool
-        run: |
-          wget -q https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -O /usr/local/bin/apktool
-          chmod +x /usr/local/bin/apktool
-          wget -q https://github.com/iBotPeaches/Apktool/releases/download/v2.9.3/apktool_2.9.3.jar -O /usr/local/bin/apktool.jar
-          chmod +x /usr/local/bin/apktool.jar
-          apktool --version
 
       - name: Tạo script apkbuilder giả
         run: |
@@ -126,71 +137,79 @@ jobs:
         run: |
           mvn clean install -pl :base,:integration-android,:wallet -am -q
 
-      - name: Đóng gói APK ban đầu
+      - name: Kiểm tra file trung gian
         run: |
-          AAPT="$ANDROID_HOME/build-tools/26.0.3/aapt"
-          APK_INPUT="wallet/target/wallet-3.17-test.ap_"
-          DEX_FILE="wallet/target/classes.dex"
-          TEMP_APK="wallet/target/wallet-3.17-test-temp.apk"
-          
-          cp "$APK_INPUT" "$TEMP_APK"
-          $AAPT add "$TEMP_APK" "$DEX_FILE"
-          
-          ls -la "$TEMP_APK"
+          echo "=== File trong wallet/target ==="
+          ls -la wallet/target/
+          echo ""
+          echo "=== File .ap_ và classes.dex ==="
+          ls -la wallet/target/*.ap_ wallet/target/classes.dex 2>/dev/null || true
 
-      - name: Chuyển về Java 17
+      - name: Chuyển về Java 17 (cho apksigner)
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'zulu'
 
-      - name: Sửa targetSdkVersion bằng apktool + đóng gói lại
+      - name: Đóng gói APK đầy đủ + ký bằng apksigner
         run: |
           BUILD_TOOLS="$ANDROID_HOME/build-tools/33.0.2"
+          OLD_BUILD_TOOLS="$ANDROID_HOME/build-tools/26.0.3"
           ZIPALIGN="$BUILD_TOOLS/zipalign"
           APK_SIGNER="$BUILD_TOOLS/apksigner"
-          TEMP_APK="wallet/target/wallet-3.17-test-temp.apk"
-          DECODED_DIR="/tmp/wallet-decoded"
-          REBUILT_APK="wallet/target/wallet-3.17-test-rebuilt.apk"
+          APK_INPUT="wallet/target/wallet-3.17-test.ap_"
+          DEX_FILE="wallet/target/classes.dex"
+          CLASSES_DIR="wallet/target/classes"
+          UNSIGNED_APK="wallet/target/wallet-3.17-test-unsigned.apk"
           ALIGNED_APK="wallet/target/wallet-3.17-test-aligned.apk"
           SIGNED_APK="wallet/target/wallet-3.17-test.apk"
           
-          # 1. Giải nén APK bằng apktool
-          apktool d -f "$TEMP_APK" -o "$DECODED_DIR"
+          # 1. Tạo thư mục làm việc
+          WORK_DIR="/tmp/apk-build"
+          rm -rf "$WORK_DIR"
+          mkdir -p "$WORK_DIR"
           
-          # 2. Xem nội dung manifest để hiểu cấu trúc
-          echo "=== Nội dung AndroidManifest.xml ==="
-          cat "$DECODED_DIR/AndroidManifest.xml"
+          # 2. Giải nén file .ap_ (chứa resources + manifest)
+          cd "$WORK_DIR"
+          unzip -q "$OLDBUILD_TOOLS/../$APK_INPUT" 2>/dev/null || unzip -q "$GITHUB_WORKSPACE/$APK_INPUT"
+          
+          echo "=== Nội dung file .ap_ ==="
+          ls -la "$WORK_DIR/"
+          
+          # 3. Sao chép classes.dex vào thư mục gốc
+          cp "$GITHUB_WORKSPACE/$DEX_FILE" "$WORK_DIR/classes.dex"
+          
+          # 4. Thêm các thư viện jar cần thiết (giải nén và thêm class files)
+          # Tìm tất cả các jar dependency
+          DEP_JARS=$(find "$HOME/.m2/repository" -name "*.jar" -type f | grep -E "(bitcoinj|netty|protobuf|guava|scrypt|zxing|slf4j|logback)" | head -20)
           echo ""
+          echo "=== Thêm các thư viện dependency ==="
+          for jar in $DEP_JARS; do
+            echo "  + $(basename $jar)"
+            cd "$WORK_DIR" && unzip -q -o "$jar" -d "$WORK_DIR/libs-tmp" 2>/dev/null || true
+          done
           
-          # 3. Sửa manifest: thêm targetSdkVersion
-          # Kiểm tra xem có thẻ <uses-sdk> không
-          if grep -q "<uses-sdk" "$DECODED_DIR/AndroidManifest.xml"; then
-            # Có thẻ <uses-sdk>, sửa hoặc thêm targetSdkVersion
-            if grep -q "android:targetSdkVersion" "$DECODED_DIR/AndroidManifest.xml"; then
-              # Đã có targetSdkVersion, sửa giá trị
-              sed -i 's/android:targetSdkVersion="[0-9]*"/android:targetSdkVersion="33"/g' "$DECODED_DIR/AndroidManifest.xml"
-            else
-              # Chưa có, thêm vào thẻ <uses-sdk>
-              sed -i 's/<uses-sdk\([^>]*\)>/<uses-sdk\1 android:targetSdkVersion="33">/g' "$DECODED_DIR/AndroidManifest.xml"
-            fi
-          else
-            # Không có thẻ <uses-sdk>, thêm vào sau thẻ <manifest> hoặc <uses-permission>
-            # Thêm thẻ <uses-sdk> trước </manifest>
-            sed -i 's/<\/manifest>/<uses-sdk android:minSdkVersion="10" android:targetSdkVersion="33"\/><\/manifest>/g' "$DECODED_DIR/AndroidManifest.xml"
+          # Di chuyển class files từ libs-tmp vào thư mục gốc (tránh trùng lặp)
+          if [ -d "$WORK_DIR/libs-tmp" ]; then
+            cd "$WORK_DIR/libs-tmp"
+            find . -name "*.class" -exec cp --parents {} "$WORK_DIR/" \; 2>/dev/null || true
+            cd "$WORK_DIR"
+            rm -rf libs-tmp
           fi
           
+          # 5. Đóng gói lại thành APK (file zip)
+          cd "$WORK_DIR"
+          zip -qr "$GITHUB_WORKSPACE/$UNSIGNED_APK" .
+          
+          cd "$GITHUB_WORKSPACE"
           echo ""
-          echo "=== Manifest sau khi sửa ==="
-          cat "$DECODED_DIR/AndroidManifest.xml"
+          echo "=== APK chưa ký ==="
+          ls -la "$UNSIGNED_APK"
           
-          # 4. Đóng gói lại bằng apktool
-          apktool b -f "$DECODED_DIR" -o "$REBUILT_APK"
+          # 6. Zipalign
+          $ZIPALIGN -f -v 4 "$UNSIGNED_APK" "$ALIGNED_APK"
           
-          # 5. Zipalign
-          $ZIPALIGN -f -v 4 "$REBUILT_APK" "$ALIGNED_APK"
-          
-          # 6. Tạo debug keystore
+          # 7. Tạo debug keystore
           if [ ! -f ~/.android/debug.keystore ]; then
             mkdir -p ~/.android
             keytool -genkey -v -keystore ~/.android/debug.keystore \
@@ -199,7 +218,7 @@ jobs:
               -dname "CN=Android Debug,O=Android,C=US"
           fi
           
-          # 7. Ký bằng apksigner
+          # 8. Ký bằng apksigner (v1 + v2 scheme)
           $APK_SIGNER sign --ks ~/.android/debug.keystore \
             --ks-pass pass:android \
             --key-pass pass:android \
@@ -209,13 +228,16 @@ jobs:
             --out "$SIGNED_APK" \
             "$ALIGNED_APK"
           
-          # 8. Xác minh
+          # 9. Xác minh
           echo ""
           echo "=== Kết quả cuối cùng ==="
           ls -la "$SIGNED_APK"
           echo ""
           echo "=== Xác minh chữ ký ==="
           $APK_SIGNER verify --verbose "$SIGNED_APK"
+          echo ""
+          echo "=== Nội dung APK ==="
+          $BUILD_TOOLS/aapt list "$SIGNED_APK" | head -30
 
       - name: Tìm file APK cuối cùng
         run: |
