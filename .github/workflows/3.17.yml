@@ -24,6 +24,15 @@ jobs:
       - name: Xác nhận commit hiện tại
         run: git log --oneline -1
 
+      - name: Kiểm tra cấu trúc thư mục
+        run: |
+          echo "=== Thư mục gốc ==="
+          ls -la
+          echo "=== Thư mục wallet ==="
+          ls -la wallet/
+          echo "=== Tìm file build ==="
+          find . -name "pom.xml" -o -name "build.gradle" -o -name "gradlew" | head -20
+
       - name: Cài đặt Java 17 (cho sdkmanager)
         uses: actions/setup-java@v4
         with:
@@ -45,23 +54,17 @@ jobs:
           java-version: '8'
           distribution: 'zulu'
 
-      - name: Xác nhận Java version
-        run: java -version
-
-      - name: Cấp quyền thực thi
-        run: |
-          chmod +x wallet/gradlew
-          chmod +x ./*
-
       - name: Biên dịch toàn bộ dự án bằng Maven
         run: mvn clean install --batch-mode --no-transfer-progress
 
-      - name: Biên dịch APK cuối cùng
-        run: cd wallet && ./gradlew clean assembleProdRelease --stacktrace --no-daemon
+      - name: Tìm file APK đã tạo
+        run: |
+          echo "=== Tìm tất cả file .apk ==="
+          find . -name "*.apk" -type f
 
       - name: Lưu APK ra kết quả
         uses: actions/upload-artifact@v4
         with:
           name: Bitcoin-Wallet-v3.17-APK
-          path: wallet/build/outputs/apk/prod/release/*.apk
+          path: "**/*.apk"
           retention-days: 7
