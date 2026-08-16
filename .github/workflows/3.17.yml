@@ -3,8 +3,8 @@ env:
   ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
   SKIP_JDK_VERSION_CHECK: "true"
   ANDROID_HOME: /usr/local/lib/android/sdk
-  MAVEN_HOME: /opt/maven-3.0.5
-  PATH: /opt/maven-3.0.5/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+  MAVEN_HOME: /opt/maven-3.2.5
+  PATH: /opt/maven-3.2.5/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 on:
   workflow_dispatch:
@@ -47,24 +47,35 @@ jobs:
           java-version: '8'
           distribution: 'zulu'
 
-      - name: Cài đặt Maven 3.0.5 (dùng Sonatype Aether, tương thích plugin 3.6.1)
+      - name: Cài đặt Maven 3.2.5 + chèn Sonatype Aether
         run: |
-          # Tải Maven 3.0.5 từ Apache archive
-          wget -q https://archive.apache.org/dist/maven/maven-3/3.0.5/binaries/apache-maven-3.0.5-bin.tar.gz
-          tar -xzf apache-maven-3.0.5-bin.tar.gz -C /opt/
-          mv /opt/apache-maven-3.0.5 /opt/maven-3.0.5
+          # Tải Maven 3.2.5 (hỗ trợ HTTPS)
+          wget -q https://archive.apache.org/dist/maven/maven-3/3.2.5/binaries/apache-maven-3.2.5-bin.tar.gz
+          tar -xzf apache-maven-3.2.5-bin.tar.gz -C /opt/
+          mv /opt/apache-maven-3.2.5 /opt/maven-3.2.5
           
-          # Xác nhận phiên bản
+          # Chèn thư viện Sonatype Aether vào lib/ext của Maven
+          # để android-maven-plugin 3.6.1 tìm thấy org.sonatype.aether.RepositorySystem
+          cd /tmp
+          wget -q https://repo1.maven.org/maven2/org/sonatype/aether/aether-api/1.13.1/aether-api-1.13.1.jar
+          wget -q https://repo1.maven.org/maven2/org/sonatype/aether/aether-spi/1.13.1/aether-spi-1.13.1.jar
+          wget -q https://repo1.maven.org/maven2/org/sonatype/aether/aether-util/1.13.1/aether-util-1.13.1.jar
+          wget -q https://repo1.maven.org/maven2/org/sonatype/aether/aether-impl/1.13.1/aether-impl-1.13.1.jar
+          cp aether-*.jar /opt/maven-3.2.5/lib/ext/
+          
+          # Xác nhận
           mvn --version
+          echo "=== Files in lib/ext ==="
+          ls /opt/maven-3.2.5/lib/ext/
 
-      - name: Clone và build bitcoinj 0.10.1 từ mã nguồn
+      - name: Clone và build bitcoinj 0.10.1
         run: |
           git clone --depth 1 --branch v0.10.1 https://github.com/bitcoinj/bitcoinj.git /tmp/bitcoinj
           cd /tmp/bitcoinj
           mvn clean install -DskipTests -q
           cd $GITHUB_WORKSPACE
 
-      - name: Biên dịch toàn bộ dự án bằng Maven 3.0.5
+      - name: Biên dịch toàn bộ dự án
         run: mvn clean install -q
 
       - name: Tìm file APK đã tạo
