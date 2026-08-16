@@ -41,27 +41,27 @@ jobs:
             "build-tools;26.0.3" \
             "platforms;android-26"
 
-      - name: Tạo script apkbuilder (công cụ cũ bị loại bỏ)
+      - name: Tải sdklib 22.0.2 + tạo script apkbuilder tương thích
         run: |
-          # Tìm sdklib.jar trong Android SDK
-          find $ANDROID_HOME -name "sdklib.jar" | head -5
+          # Tải sdklib.jar phiên bản 22.0.2 (năm 2013, có ApkBuilderMain)
+          mkdir -p /opt/android-tools-legacy
+          wget -q https://repo1.maven.org/maven2/com/android/tools/sdklib/22.0.2/sdklib-22.0.2.jar -O /opt/android-tools-legacy/sdklib-22.0.2.jar
           
-          # Tạo script apkbuilder gọi trực tiếp class Java
+          # Tải các dependency cần thiết cho sdklib 22.0.2
+          wget -q https://repo1.maven.org/maven2/com/android/tools/common/22.0.2/common-22.0.2.jar -O /opt/android-tools-legacy/common-22.0.2.jar
+          wget -q https://repo1.maven.org/maven2/com/android/tools/build/builder/0.4.2/builder-0.4.2.jar -O /opt/android-tools-legacy/builder-0.4.2.jar
+          wget -q https://repo1.maven.org/maven2/com/google/guava/guava/13.0.1/guava-13.0.1.jar -O /opt/android-tools-legacy/guava-13.0.1.jar
+          
+          # Tạo script apkbuilder
           cat > $ANDROID_HOME/tools/apkbuilder << 'APKBUILDER_EOF'
           #!/bin/bash
-          # Script thay thế cho apkbuilder cũ
-          # Tìm sdklib.jar
-          SDKLIB=$(find $ANDROID_HOME -name "sdklib.jar" 2>/dev/null | head -1)
-          if [ -z "$SDKLIB" ]; then
-            echo "ERROR: sdklib.jar not found"
-            exit 1
-          fi
-          exec java -classpath "$SDKLIB" com.android.sdklib.build.ApkBuilderMain "$@"
+          LEGACY_LIBS="/opt/android-tools-legacy"
+          CLASSPATH="$LEGACY_LIBS/sdklib-22.0.2.jar:$LEGACY_LIBS/common-22.0.2.jar:$LEGACY_LIBS/builder-0.4.2.jar:$LEGACY_LIBS/guava-13.0.1.jar"
+          exec java -classpath "$CLASSPATH" com.android.sdklib.build.ApkBuilderMain "$@"
           APKBUILDER_EOF
           
           chmod +x $ANDROID_HOME/tools/apkbuilder
-          
-          # Kiểm tra
+          echo "=== apkbuilder đã tạo ==="
           ls -la $ANDROID_HOME/tools/apkbuilder
 
       - name: Chuyển về Java 8 (cho biên dịch dự án)
