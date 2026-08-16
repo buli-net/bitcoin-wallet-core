@@ -2,6 +2,7 @@ name: Build Bitcoin Wallet v3.17
 env:
   ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
   SKIP_JDK_VERSION_CHECK: "true"
+  ANDROID_HOME: /usr/local/lib/android/sdk
 
 on:
   workflow_dispatch:
@@ -29,12 +30,16 @@ jobs:
           java-version: '8'
           distribution: 'zulu'
 
-      - name: Cài đặt Android SDK (dùng cmdline-tools tương thích)
-        uses: android-actions/setup-android@v3
-        with:
-          cmdline-tools-version: "9.0"  # Phiên bản vẫn còn tải được, tương thích JDK 8
-          accept-android-sdk-licenses: true
-          packages: tools platform-tools build-tools;26.0.3 platforms;android-26
+      - name: Cài đặt Android SDK packages (dùng SDK có sẵn)
+        run: |
+          # Chấp nhận licenses
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          # Cài đặt các gói cần thiết cho bản v3.17
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "tools" \
+            "platform-tools" \
+            "build-tools;26.0.3" \
+            "platforms;android-26"
 
       - name: Cấp quyền thực thi
         run: |
