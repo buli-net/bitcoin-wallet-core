@@ -29,7 +29,7 @@ jobs:
           java-version: '17'
           distribution: 'zulu'
 
-      - name: Cài đặt Android SDK (chỉ giữ phiên bản cần thiết)
+      - name: Cài đặt Android SDK (bao gồm cả API 14)
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
@@ -37,11 +37,10 @@ jobs:
             "platform-tools" \
             "build-tools;26.0.3" \
             "build-tools;33.0.2" \
+            "platforms;android-14" \
             "platforms;android-26"
           
-          # Xóa các platform khác để Maven không chọn nhầm
-          rm -rf $ANDROID_HOME/platforms/android-*[^6]
-          echo "=== Platforms còn lại ==="
+          echo "=== Platforms đã cài ==="
           ls $ANDROID_HOME/platforms/
 
       - name: Tạo script apkbuilder giả
@@ -136,17 +135,12 @@ jobs:
           ALIGNED_APK="wallet/target/wallet-3.17-test-aligned.apk"
           SIGNED_APK="wallet/target/wallet-3.17-test.apk"
           
-          # 1. Sao chép .ap_ thành APK
           cp "$APK_INPUT" "$ALIGNED_APK"
-          
-          # 2. Thêm classes.dex vào APK
           $AAPT add "$ALIGNED_APK" "$DEX_FILE"
           
-          # 3. Zipalign
           $ZIPALIGN -f -v 4 "$ALIGNED_APK" "${ALIGNED_APK}.tmp"
           mv "${ALIGNED_APK}.tmp" "$ALIGNED_APK"
           
-          # 4. Tạo debug keystore
           if [ ! -f ~/.android/debug.keystore ]; then
             mkdir -p ~/.android
             keytool -genkey -v -keystore ~/.android/debug.keystore \
@@ -155,7 +149,6 @@ jobs:
               -dname "CN=Android Debug,O=Android,C=US"
           fi
           
-          # 5. Ký bằng apksigner (v1 + v2 scheme)
           $APK_SIGNER sign --ks ~/.android/debug.keystore \
             --ks-pass pass:android \
             --key-pass pass:android \
@@ -165,7 +158,6 @@ jobs:
             --out "$SIGNED_APK" \
             "$ALIGNED_APK"
           
-          # 6. Xác minh
           echo ""
           echo "=== Kết quả ==="
           ls -la "$SIGNED_APK"
