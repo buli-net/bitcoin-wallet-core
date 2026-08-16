@@ -41,6 +41,29 @@ jobs:
             "build-tools;26.0.3" \
             "platforms;android-26"
 
+      - name: Tạo script apkbuilder (công cụ cũ bị loại bỏ)
+        run: |
+          # Tìm sdklib.jar trong Android SDK
+          find $ANDROID_HOME -name "sdklib.jar" | head -5
+          
+          # Tạo script apkbuilder gọi trực tiếp class Java
+          cat > $ANDROID_HOME/tools/apkbuilder << 'APKBUILDER_EOF'
+          #!/bin/bash
+          # Script thay thế cho apkbuilder cũ
+          # Tìm sdklib.jar
+          SDKLIB=$(find $ANDROID_HOME -name "sdklib.jar" 2>/dev/null | head -1)
+          if [ -z "$SDKLIB" ]; then
+            echo "ERROR: sdklib.jar not found"
+            exit 1
+          fi
+          exec java -classpath "$SDKLIB" com.android.sdklib.build.ApkBuilderMain "$@"
+          APKBUILDER_EOF
+          
+          chmod +x $ANDROID_HOME/tools/apkbuilder
+          
+          # Kiểm tra
+          ls -la $ANDROID_HOME/tools/apkbuilder
+
       - name: Chuyển về Java 8 (cho biên dịch dự án)
         uses: actions/setup-java@v4
         with:
@@ -49,12 +72,10 @@ jobs:
 
       - name: Cài đặt Maven 3.0.5 + cấu hình HTTPS
         run: |
-          # Tải Maven 3.0.5 (dùng Sonatype Aether gốc)
           wget -q https://archive.apache.org/dist/maven/maven-3/3.0.5/binaries/apache-maven-3.0.5-bin.tar.gz
           tar -xzf apache-maven-3.0.5-bin.tar.gz -C /opt/
           mv /opt/apache-maven-3.0.5 /opt/maven-3.0.5
           
-          # Tạo settings.xml bắt buộc dùng HTTPS cho Maven Central
           mkdir -p ~/.m2
           cat > ~/.m2/settings.xml << 'EOF'
           <settings>
@@ -85,7 +106,6 @@ jobs:
           </settings>
           EOF
           
-          # Xác nhận
           mvn --version
 
       - name: Clone và build bitcoinj 0.10.1
