@@ -23,26 +23,13 @@ jobs:
       - name: Checkout đúng commit 982c631
         run: git checkout 982c631
 
-      - name: Nâng targetSdkVersion để tương thích Android 16
-        run: |
-          echo "=== AndroidManifest.xml trước khi sửa ==="
-          grep -n "sdkVersion\|targetSdkVersion\|minSdkVersion" wallet/AndroidManifest.xml
-          
-          # Sửa: giữ minSdkVersion=10, nâng targetSdkVersion lên 33 (Android 13)
-          # và compileSdkVersion tương ứng
-          sed -i 's/android:minSdkVersion="10"/android:minSdkVersion="10" android:targetSdkVersion="33"/g' wallet/AndroidManifest.xml
-          
-          echo ""
-          echo "=== AndroidManifest.xml sau khi sửa ==="
-          grep -n "sdkVersion\|targetSdkVersion\|minSdkVersion" wallet/AndroidManifest.xml
-
       - name: Cài đặt Java 17 (cho sdkmanager)
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'zulu'
 
-      - name: Cài đặt Android SDK packages
+      - name: Cài đặt Android SDK (chỉ giữ phiên bản cần thiết)
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
@@ -50,9 +37,12 @@ jobs:
             "platform-tools" \
             "build-tools;26.0.3" \
             "build-tools;33.0.2" \
-            "platforms;android-26" \
-            "platforms;android-33" \
-            "platforms;android-10"
+            "platforms;android-26"
+          
+          # Xóa các platform khác để Maven không chọn nhầm
+          rm -rf $ANDROID_HOME/platforms/android-*[^6]
+          echo "=== Platforms còn lại ==="
+          ls $ANDROID_HOME/platforms/
 
       - name: Tạo script apkbuilder giả
         run: |
@@ -128,7 +118,14 @@ jobs:
         run: |
           mvn clean install -pl :base,:integration-android,:wallet -am -q
 
-      - name: Đóng gói APK thủ công + ký bằng apksigner (Scheme v2)
+      - name: Kiểm tra file trung gian
+        run: |
+          echo "=== File trong wallet/target ==="
+          ls -la wallet/target/
+          echo ""
+          ls -la wallet/target/*.ap_ wallet/target/classes.dex 2>/dev/null || true
+
+      - name: Đóng gói APK + ký bằng apksigner (v1+v2 scheme)
         run: |
           BUILD_TOOLS="$ANDROID_HOME/build-tools/33.0.2"
           AAPT="$ANDROID_HOME/build-tools/26.0.3/aapt"
@@ -145,7 +142,7 @@ jobs:
           # 2. Thêm classes.dex vào APK
           $AAPT add "$ALIGNED_APK" "$DEX_FILE"
           
-          # 3. Zipalign trước (bắt buộc cho apksigner)
+          # 3. Zipalign
           $ZIPALIGN -f -v 4 "$ALIGNED_APK" "${ALIGNED_APK}.tmp"
           mv "${ALIGNED_APK}.tmp" "$ALIGNED_APK"
           
@@ -158,7 +155,7 @@ jobs:
               -dname "CN=Android Debug,O=Android,C=US"
           fi
           
-          # 5. Ký bằng apksigner (hỗ trợ v1 + v2 scheme)
+          # 5. Ký bằng apksigner (v1 + v2 scheme)
           $APK_SIGNER sign --ks ~/.android/debug.keystore \
             --ks-pass pass:android \
             --key-pass pass:android \
