@@ -40,7 +40,7 @@ jobs:
             "platform-tools" \
             "build-tools;26.0.3" \
             "platforms;android-26" \
-            "platforms;android-10"  # Thêm cho an toàn
+            "platforms;android-10"
 
       - name: Tạo script apkbuilder giả
         run: |
@@ -112,9 +112,8 @@ jobs:
           mvn clean install -DskipTests -q
           cd $GITHUB_WORKSPACE
 
-      - name: Build base + integration-android + wallet (bỏ qua sample)
+      - name: Build base + integration-android + wallet
         run: |
-          # Build các mô-đun cần thiết, bỏ qua sample-integration-android
           mvn clean install -pl :base,:integration-android,:wallet -am -q
 
       - name: Kiểm tra file trung gian
@@ -122,38 +121,49 @@ jobs:
           echo "=== File trong wallet/target ==="
           ls -la wallet/target/
           echo ""
-          echo "=== Kiểm tra .ap_ và classes.dex ==="
           ls -la wallet/target/*.ap_ wallet/target/classes.dex 2>/dev/null || true
 
-      - name: Đóng gói APK thủ công bằng aapt
+      - name: Đóng gói APK thủ công + ký + zipalign
         run: |
           BUILD_TOOLS="$ANDROID_HOME/build-tools/26.0.3"
           AAPT="$BUILD_TOOLS/aapt"
+          ZIPALIGN="$BUILD_TOOLS/zipalign"
           APK_INPUT="wallet/target/wallet-3.17-test.ap_"
           DEX_FILE="wallet/target/classes.dex"
-          FINAL_APK="wallet/target/wallet-3.17-test.apk"
+          UNSIGNED_APK="wallet/target/wallet-3.17-test-unsigned.apk"
+          SIGNED_APK="wallet/target/wallet-3.17-test.apk"
           
-          if [ ! -f "$APK_INPUT" ]; then
-            echo "ERROR: File .ap_ không tồn tại!"
-            exit 1
+          # 1. Sao chép .ap_ thành APK chưa ký
+          cp "$APK_INPUT" "$UNSIGNED_APK"
+          
+          # 2. Thêm classes.dex vào APK
+          $AAPT add "$UNSIGNED_APK" "$DEX_FILE"
+          
+          # 3. Tạo debug keystore (nếu chưa có)
+          if [ ! -f ~/.android/debug.keystore ]; then
+            mkdir -p ~/.android
+            keytool -genkey -v -keystore ~/.android/debug.keystore \
+              -storepass android -alias androiddebugkey \
+              -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
           fi
-          if [ ! -f "$DEX_FILE" ]; then
-            echo "ERROR: classes.dex không tồn tại!"
-            exit 1
-          fi
           
-          # Sao chép .ap_ thành .apk
-          cp "$APK_INPUT" "$FINAL_APK"
+          # 4. Ký APK bằng jarsigner (với thuật toán tương thích)
+          jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 \
+            -keystore ~/.android/debug.keystore \
+            -storepass android -keypass android \
+            "$UNSIGNED_APK" androiddebugkey
           
-          # Thêm classes.dex vào APK
-          $AAPT add "$FINAL_APK" "$DEX_FILE"
+          # 5. Zipalign APK
+          $ZIPALIGN -f -v 4 "$UNSIGNED_APK" "$SIGNED_APK"
           
+          # 6. Xác minh
           echo ""
           echo "=== Kết quả ==="
-          ls -la "$FINAL_APK"
+          ls -la "$SIGNED_APK"
           echo ""
-          echo "=== Kiểm tra nội dung APK ==="
-          $AAPT list "$FINAL_APK" | head -30
+          echo "=== Xác minh chữ ký ==="
+          jarsigner -verify -verbose -certs "$SIGNED_APK" | head -10
 
       - name: Tìm file APK cuối cùng
         run: |
