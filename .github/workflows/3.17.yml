@@ -24,22 +24,29 @@ jobs:
       - name: Xác nhận commit hiện tại
         run: git log --oneline -1
 
-      - name: Cài đặt Java 8
+      - name: Cài đặt Java 17 (cho sdkmanager)
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
+          java-version: '17'
           distribution: 'zulu'
 
-      - name: Cài đặt Android SDK packages (dùng SDK có sẵn)
+      - name: Cài đặt Android SDK packages
         run: |
-          # Chấp nhận licenses
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          # Cài đặt các gói cần thiết cho bản v3.17
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
             "tools" \
             "platform-tools" \
             "build-tools;26.0.3" \
             "platforms;android-26"
+
+      - name: Chuyển về Java 8 (cho biên dịch dự án)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'zulu'
+
+      - name: Xác nhận Java version
+        run: java -version
 
       - name: Cấp quyền thực thi
         run: |
