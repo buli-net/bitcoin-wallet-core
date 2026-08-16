@@ -44,17 +44,12 @@ jobs:
           echo "=== Platforms đã cài ==="
           ls $ANDROID_HOME/platforms/
 
-      - name: Cài đặt apktool (từ GitHub releases)
+      - name: Cài đặt apktool
         run: |
-          # Tải script apktool
           wget -q https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -O /usr/local/bin/apktool
           chmod +x /usr/local/bin/apktool
-          
-          # Tải apktool.jar từ GitHub releases
           wget -q https://github.com/iBotPeaches/Apktool/releases/download/v2.9.3/apktool_2.9.3.jar -O /usr/local/bin/apktool.jar
           chmod +x /usr/local/bin/apktool.jar
-          
-          # Kiểm tra
           apktool --version
 
       - name: Tạo script apkbuilder giả
@@ -76,7 +71,7 @@ jobs:
           APKBUILDER_EOF
           chmod +x $ANDROID_HOME/tools/apkbuilder
 
-      - name: Chuyển về Java 8 (cho Maven build)
+      - name: Chuyển về Java 8
         uses: actions/setup-java@v4
         with:
           java-version: '8'
@@ -143,7 +138,7 @@ jobs:
           
           ls -la "$TEMP_APK"
 
-      - name: Chuyển về Java 17 (cho apktool + apksigner)
+      - name: Chuyển về Java 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
@@ -163,27 +158,39 @@ jobs:
           # 1. Giải nén APK bằng apktool
           apktool d -f "$TEMP_APK" -o "$DECODED_DIR"
           
-          # 2. Sửa AndroidManifest.xml: thêm/nâng targetSdkVersion lên 33
-          echo "=== Manifest trước khi sửa ==="
-          grep -n "sdkVersion\|targetSdkVersion\|minSdkVersion" "$DECODED_DIR/AndroidManifest.xml" || true
+          # 2. Xem nội dung manifest để hiểu cấu trúc
+          echo "=== Nội dung AndroidManifest.xml ==="
+          cat "$DECODED_DIR/AndroidManifest.xml"
+          echo ""
           
-          if grep -q "android:targetSdkVersion" "$DECODED_DIR/AndroidManifest.xml"; then
-            sed -i 's/android:targetSdkVersion="[0-9]*"/android:targetSdkVersion="33"/g' "$DECODED_DIR/AndroidManifest.xml"
+          # 3. Sửa manifest: thêm targetSdkVersion
+          # Kiểm tra xem có thẻ <uses-sdk> không
+          if grep -q "<uses-sdk" "$DECODED_DIR/AndroidManifest.xml"; then
+            # Có thẻ <uses-sdk>, sửa hoặc thêm targetSdkVersion
+            if grep -q "android:targetSdkVersion" "$DECODED_DIR/AndroidManifest.xml"; then
+              # Đã có targetSdkVersion, sửa giá trị
+              sed -i 's/android:targetSdkVersion="[0-9]*"/android:targetSdkVersion="33"/g' "$DECODED_DIR/AndroidManifest.xml"
+            else
+              # Chưa có, thêm vào thẻ <uses-sdk>
+              sed -i 's/<uses-sdk\([^>]*\)>/<uses-sdk\1 android:targetSdkVersion="33">/g' "$DECODED_DIR/AndroidManifest.xml"
+            fi
           else
-            sed -i 's/android:minSdkVersion="\([0-9]*\)"/android:minSdkVersion="\1" android:targetSdkVersion="33"/g' "$DECODED_DIR/AndroidManifest.xml"
+            # Không có thẻ <uses-sdk>, thêm vào sau thẻ <manifest> hoặc <uses-permission>
+            # Thêm thẻ <uses-sdk> trước </manifest>
+            sed -i 's/<\/manifest>/<uses-sdk android:minSdkVersion="10" android:targetSdkVersion="33"\/><\/manifest>/g' "$DECODED_DIR/AndroidManifest.xml"
           fi
           
           echo ""
           echo "=== Manifest sau khi sửa ==="
-          grep -n "sdkVersion\|targetSdkVersion\|minSdkVersion" "$DECODED_DIR/AndroidManifest.xml"
+          cat "$DECODED_DIR/AndroidManifest.xml"
           
-          # 3. Đóng gói lại bằng apktool
+          # 4. Đóng gói lại bằng apktool
           apktool b -f "$DECODED_DIR" -o "$REBUILT_APK"
           
-          # 4. Zipalign
+          # 5. Zipalign
           $ZIPALIGN -f -v 4 "$REBUILT_APK" "$ALIGNED_APK"
           
-          # 5. Tạo debug keystore
+          # 6. Tạo debug keystore
           if [ ! -f ~/.android/debug.keystore ]; then
             mkdir -p ~/.android
             keytool -genkey -v -keystore ~/.android/debug.keystore \
@@ -192,7 +199,7 @@ jobs:
               -dname "CN=Android Debug,O=Android,C=US"
           fi
           
-          # 6. Ký bằng apksigner (v1 + v2 scheme)
+          # 7. Ký bằng apksigner
           $APK_SIGNER sign --ks ~/.android/debug.keystore \
             --ks-pass pass:android \
             --key-pass pass:android \
@@ -202,7 +209,7 @@ jobs:
             --out "$SIGNED_APK" \
             "$ALIGNED_APK"
           
-          # 7. Xác minh
+          # 8. Xác minh
           echo ""
           echo "=== Kết quả cuối cùng ==="
           ls -la "$SIGNED_APK"
