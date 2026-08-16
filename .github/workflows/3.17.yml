@@ -24,15 +24,6 @@ jobs:
       - name: Xác nhận commit hiện tại
         run: git log --oneline -1
 
-      - name: Kiểm tra cấu trúc thư mục
-        run: |
-          echo "=== Thư mục gốc ==="
-          ls -la
-          echo "=== Thư mục wallet ==="
-          ls -la wallet/
-          echo "=== Tìm file build ==="
-          find . -name "pom.xml" -o -name "build.gradle" -o -name "gradlew" | head -20
-
       - name: Cài đặt Java 17 (cho sdkmanager)
         uses: actions/setup-java@v4
         with:
@@ -53,6 +44,19 @@ jobs:
         with:
           java-version: '8'
           distribution: 'zulu'
+
+      - name: Tải và cài đặt bitcoinj 0.10.1 vào local Maven repo
+        run: |
+          # Tải bitcoinj 0.10.1 từ GitHub releases
+          wget -q https://github.com/bitcoinj/bitcoinj/releases/download/v0.10.1/bitcoinj-0.10.1.jar -O bitcoinj-0.10.1.jar
+          
+          # Cài vào local Maven repository với đúng groupId:artifactId:version
+          mvn install:install-file \
+            -Dfile=bitcoinj-0.10.1.jar \
+            -DgroupId=com.google \
+            -DartifactId=bitcoinj \
+            -Dversion=0.10.1 \
+            -Dpackaging=jar
 
       - name: Biên dịch toàn bộ dự án bằng Maven
         run: mvn clean install --batch-mode --no-transfer-progress
