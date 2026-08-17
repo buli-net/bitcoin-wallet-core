@@ -1,4 +1,4 @@
-name: Build Bitcoin Wallet v3.17
+name: Build Bitcoin Wallet v3.17 - Tương thích Android 16
 env:
   ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
   SKIP_JDK_VERSION_CHECK: "true"
@@ -11,31 +11,15 @@ on:
 
 jobs:
   build:
-    name: Build APK v3.17
+    name: Build APK tương thích cao
     runs-on: ubuntu-latest
     steps:
-      - name: Lấy toàn bộ mã nguồn
+      - name: Lấy mã nguồn & Checkout commit
         uses: actions/checkout@v4
         with:
           repository: buli-net/test-B-Wallet
           fetch-depth: 0
-
-      - name: Checkout đúng commit 982c631
-        run: git checkout 982c631
-
-      - name: Sửa AndroidManifest.xml thêm targetSdkVersion
-        run: |
-          echo "=== Manifest gốc ==="
-          cat wallet/AndroidManifest.xml
-          echo ""
-          
-          # Thêm android:targetSdkVersion="26"
-          if grep -q "<uses-sdk" wallet/AndroidManifest.xml; then
-            sed -i 's/<uses-sdk\([^>]*\)>/<uses-sdk\1 android:targetSdkVersion="26">/g' wallet/AndroidManifest.xml
-          fi
-          
-          echo "=== Manifest sau khi sửa ==="
-          cat wallet/AndroidManifest.xml
+      - run: git checkout 982c631
 
       - name: Cài đặt Java 17
         uses: actions/setup-java@v4
@@ -43,216 +27,94 @@ jobs:
           java-version: '17'
           distribution: 'zulu'
 
-      - name: Cài đặt Android SDK
+      - name: Cài đặt Android SDK đầy đủ
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
-            "tools" \
-            "platform-tools" \
-            "build-tools;26.0.3" \
-            "build-tools;33.0.2" \
-            "platforms;android-14" \
-            "platforms;android-26"
-          
-          rm -rf $ANDROID_HOME/platforms/android-3*
-          echo "=== Platforms còn lại ==="
-          ls $ANDROID_HOME/platforms/
+            "tools" "platform-tools" \
+            "build-tools;26.0.3" "build-tools;33.0.2" \
+            "platforms;android-14" "platforms;android-26" "platforms;android-33"
+          rm -rf $ANDROID_HOME/platforms/android-3[4-9]*
 
       - name: Tạo script apkbuilder giả
         run: |
-          cat > $ANDROID_HOME/tools/apkbuilder << 'APKBUILDER_EOF'
+          cat > $ANDROID_HOME/tools/apkbuilder << 'EOF'
           #!/bin/bash
-          OUTPUT_APK=""
-          while [[ $# -gt 0 ]]; do
-            case "$1" in
-              /*.apk) OUTPUT_APK="$1"; shift;;
-              *) shift;;
-            esac
-          done
-          if [ -n "$OUTPUT_APK" ]; then
-            touch "$OUTPUT_APK"
-            echo "apkbuilder (fake): created placeholder $OUTPUT_APK" >&2
-          fi
+          [ -n "$*" ] && touch "${*: -1}"
           exit 0
-          APKBUILDER_EOF
+          EOF
           chmod +x $ANDROID_HOME/tools/apkbuilder
 
-      - name: Chuyển về Java 8
+      - name: Chuyển về Java 8 & Cài đặt Maven
         uses: actions/setup-java@v4
         with:
           java-version: '8'
           distribution: 'zulu'
-
-      - name: Cài đặt Maven 3.0.5 + cấu hình HTTPS
-        run: |
+      - run: |
           wget -q https://archive.apache.org/dist/maven/maven-3/3.0.5/binaries/apache-maven-3.0.5-bin.tar.gz
-          tar -xzf apache-maven-3.0.5-bin.tar.gz -C /opt/
+          tar -xzf apache-maven-3.0.5-bin.tar.gz -C /opt
           mv /opt/apache-maven-3.0.5 /opt/maven-3.0.5
-          
           mkdir -p ~/.m2
           cat > ~/.m2/settings.xml << 'EOF'
-          <settings>
-            <profiles>
-              <profile>
-                <id>https-central</id>
-                <repositories>
-                  <repository>
-                    <id>central</id>
-                    <url>https://repo.maven.apache.org/maven2</url>
-                    <releases><enabled>true</enabled></releases>
-                    <snapshots><enabled>false</enabled></snapshots>
-                  </repository>
-                </repositories>
-                <pluginRepositories>
-                  <pluginRepository>
-                    <id>central</id>
-                    <url>https://repo.maven.apache.org/maven2</url>
-                    <releases><enabled>true</enabled></releases>
-                    <snapshots><enabled>false</enabled></snapshots>
-                  </pluginRepository>
-                </pluginRepositories>
-              </profile>
-            </profiles>
-            <activeProfiles>
-              <activeProfile>https-central</activeProfile>
-            </activeProfiles>
-          </settings>
+          <settings><profiles><profile><id>central</id><repositories><repository><id>central</id><url>https://repo.maven.apache.org/maven2</url></repository></repositories></profile></profiles><activeProfiles><activeProfile>central</activeProfile></activeProfiles></settings>
           EOF
-          
-          mvn --version
 
-      - name: Clone và build bitcoinj 0.10.1
+      - name: Build bitcoinj 0.10.1
         run: |
           git clone --depth 1 --branch v0.10.1 https://github.com/bitcoinj/bitcoinj.git /tmp/bitcoinj
-          cd /tmp/bitcoinj
-          mvn clean install -DskipTests -q
-          cd $GITHUB_WORKSPACE
+          cd /tmp/bitcoinj && mvn clean install -DskipTests -q
 
-      - name: Build base + integration-android + wallet
-        run: |
-          mvn clean install -pl :base,:integration-android,:wallet -am -q
+      - name: Build dự án gốc
+        run: mvn clean install -pl :base,:integration-android,:wallet -am -q
 
-      - name: Kiểm tra file trung gian
-        run: |
-          echo "=== File trong wallet/target ==="
-          ls -la wallet/target/
-          echo ""
-          echo "=== classes.dex size ==="
-          ls -la wallet/target/classes.dex
-          echo ""
-          echo "=== Tìm dependency jars ==="
-          find ~/.m2/repository -name "*.jar" -type f | grep -E "(bitcoinj-0\.10\.1|netty|protobuf|guava|scrypt|zxing|slf4j-api|logback)" | grep -v sources | grep -v examples | grep -v tools
-
-      - name: Chuyển về Java 17
+      - name: Chuyển về Java 17 & Cài đặt công cụ sửa manifest
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'zulu'
+      - run: |
+        wget -q https://github.com/skylot/jadx/releases/download/v1.4.7/jadx-1.4.7.zip -O /tmp/jadx.zip
+        unzip -q /tmp/jadx.zip -d /opt/jadx
+        wget -q https://repo1.maven.org/maven2/com/android/tools/build/manifest-merger/33.0.2/manifest-merger-33.0.2.jar -O /opt/manifest-merger.jar
 
-      - name: Đóng gói APK hoàn chỉnh + ký
+      - name: Đóng gói + sửa manifest tương thích Android 16
         run: |
-          BUILD_TOOLS_33="$ANDROID_HOME/build-tools/33.0.2"
-          BUILD_TOOLS_26="$ANDROID_HOME/build-tools/26.0.3"
-          DX="$BUILD_TOOLS_26/dx"
-          ZIPALIGN="$BUILD_TOOLS_33/zipalign"
-          APK_SIGNER="$BUILD_TOOLS_33/apksigner"
-          AAPT="$BUILD_TOOLS_26/aapt"
-          
-          APK_INPUT="wallet/target/wallet-3.17-test.ap_"
-          CLASSES_DIR="wallet/target/classes"
-          UNSIGNED_APK="wallet/target/wallet-3.17-test-unsigned.apk"
-          ALIGNED_APK="wallet/target/wallet-3.17-test-aligned.apk"
-          SIGNED_APK="wallet/target/wallet-3.17-test.apk"
-          
-          # Xóa file APK giả nếu tồn tại
-          rm -f "$UNSIGNED_APK" "$ALIGNED_APK" "$SIGNED_APK"
-          
-          # 1. Tạo classes.dex hoàn chỉnh bằng dx (hợp nhất classes + tất cả thư viện)
-          echo "=== Tạo classes.dex hoàn chỉnh ==="
-          DX_ARGS="--dex --output=/tmp/classes-complete.dex"
-          
-          # Thêm thư mục classes của dự án
-          DX_ARGS="$DX_ARGS $CLASSES_DIR"
-          
-          # Thêm các dependency jars cần thiết
-          DEP_JARS=$(find ~/.m2/repository -name "*.jar" -type f | grep -E "(bitcoinj-0\.10\.1\.jar|netty-3\.6\.3|protobuf-java-2\.4\.1|guava-13\.0\.1|scrypt-1\.3\.3|core-2\.2|slf4j-api-1\.7\.5|logback-android)" | grep -v sources | grep -v examples | grep -v tools)
-          
-          for jar in $DEP_JARS; do
-            echo "  + Thêm: $(basename $jar)"
-            DX_ARGS="$DX_ARGS $jar"
-          done
-          
-          # Chạy dx
-          $DX $DX_ARGS
-          
-          echo ""
-          echo "=== classes.dex hoàn chỉnh ==="
-          ls -la /tmp/classes-complete.dex
-          
-          # 2. Giải nén file .ap_ (resources + manifest)
-          WORK_DIR="/tmp/apk-build"
-          rm -rf "$WORK_DIR"
-          mkdir -p "$WORK_DIR"
-          cd "$WORK_DIR"
-          unzip -q "$GITHUB_WORKSPACE/$APK_INPUT"
-          
-          echo ""
-          echo "=== Nội dung file .ap_ ==="
-          ls -la "$WORK_DIR/"
-          
-          # 3. Thay classes.dex bằng bản hoàn chỉnh
-          cp /tmp/classes-complete.dex "$WORK_DIR/classes.dex"
-          
-          # 4. Đóng gói lại thành APK bằng zip
-          cd "$WORK_DIR"
-          zip -qr "$GITHUB_WORKSPACE/$UNSIGNED_APK" .
-          
-          cd "$GITHUB_WORKSPACE"
-          echo ""
-          echo "=== APK chưa ký ==="
-          ls -la "$UNSIGNED_APK"
-          
-          # 5. Zipalign
-          $ZIPALIGN -f -v 4 "$UNSIGNED_APK" "$ALIGNED_APK"
-          
-          # 6. Tạo debug keystore
-          if [ ! -f ~/.android/debug.keystore ]; then
-            mkdir -p ~/.android
-            keytool -genkey -v -keystore ~/.android/debug.keystore \
-              -storepass android -alias androiddebugkey \
-              -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
-              -dname "CN=Android Debug,O=Android,C=US"
-          fi
-          
-          # 7. Ký bằng apksigner
-          $APK_SIGNER sign --ks ~/.android/debug.keystore \
-            --ks-pass pass:android \
-            --key-pass pass:android \
-            --ks-key-alias androiddebugkey \
-            --v1-signing-enabled true \
-            --v2-signing-enabled true \
-            --out "$SIGNED_APK" \
-            "$ALIGNED_APK"
-          
-          # 8. Xác minh
-          echo ""
-          echo "=== Kết quả cuối cùng ==="
-          ls -la "$SIGNED_APK"
-          echo ""
-          echo "=== Xác minh chữ ký ==="
-          $APK_SIGNER verify --verbose "$SIGNED_APK"
-          echo ""
-          echo "=== Nội dung APK ==="
-          $AAPT list "$SIGNED_APK" | head -30
+          BUILD26="$ANDROID_HOME/build-tools/26.0.3"
+          BUILD33="$ANDROID_HOME/build-tools/33.0.2"
+          AAPT33="$BUILD33/aapt"
+          DX="$BUILD26/dx"
+          ZIPALIGN="$BUILD33/zipalign"
+          SIGNER="$BUILD33/apksigner"
 
-      - name: Tìm file APK cuối cùng
-        run: |
-          echo "=== Tìm tất cả file .apk ==="
-          find . -name "*.apk" -type f -size +0k
+          AP_RAW="wallet/target/wallet-3.17-test.ap_"
+          CLS_DIR="wallet/target/classes"
+          OUT_APK="wallet/target/BitcoinWallet-v3.17.apk"
+          WORK="/tmp/apk-final"
+          rm -rf "$WORK" && mkdir -p "$WORK"
 
-      - name: Lưu APK ra kết quả
+          # 1. Tạo classes.dex hoàn chỉnh
+          DEPS=$(find ~/.m2/repository -name "*.jar" | grep -E "(bitcoinj-0\.10\.1|netty-3\.6\.3|protobuf-java-2\.4\.1|guava-13\.0\.1|scrypt-1\.3\.3|slf4j-api|logback-android)" | grep -v sources | grep -v examples)
+          $DX --dex --output="$WORK/classes.dex" "$CLS_DIR" $DEPS
+
+          # 2. Giải nén tài nguyên gốc & sửa manifest bằng aapt 33
+          cd "$WORK" && unzip -q "$GITHUB_WORKSPACE/$AP_RAW"
+          echo '<?xml version="1.0" encoding="utf-8"?><manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.google.bitcoin.wallet" android:versionCode="317000" android:versionName="3.17"><uses-sdk android:minSdkVersion="10" android:targetSdkVersion="33"/><uses-permission android:name="android.permission.INTERNET"/><uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/><application android:allowBackup="false" android:icon="@drawable/icon" android:label="@string/app_name" android:theme="@style/Theme.Transparent"><activity android:name=".WalletActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity></application></manifest>' > AndroidManifest.xml
+
+          # 3. Biên dịch lại tài nguyên & đóng gói APK
+          $AAPT33 package -f -M "$WORK/AndroidManifest.xml" -S "$WORK/res" -A "$WORK/assets" -I "$ANDROID_HOME/platforms/android-33/android.jar" -F "$WORK/unsigned.apk" --auto-add-overlay
+          echo -n "classes.dex" | $AAPT33 add -f "$WORK/unsigned.apk" "$WORK/classes.dex"
+
+          # 4. Căn chỉnh & ký
+          $ZIPALIGN -f 4 "$WORK/unsigned.apk" "$WORK/aligned.apk"
+          [ ! -f ~/.android/debug.keystore ] && keytool -genkey -noprompt -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          $SIGNER sign --ks ~/.android/debug.keystore --ks-pass pass:android --key-pass pass:android --ks-key-alias androiddebugkey --v1-signing-enabled true --v2-signing-enabled true --out "$OUT_APK" "$WORK/aligned.apk"
+
+          echo "✅ APK cuối cùng: $(du -h "$OUT_APK")"
+          $SIGNER verify --verbose "$OUT_APK"
+
+      - name: Lưu kết quả
         uses: actions/upload-artifact@v4
         with:
-          name: Bitcoin-Wallet-v3.17-APK
-          path: "wallet/target/wallet-3.17-test.apk"
-          retention-days: 7
+          name: Bitcoin-Wallet-v3.17-TuongThich-Android16
+          path: wallet/target/BitcoinWallet-v3.17.apk
+          retention-days: 14
