@@ -1,13 +1,14 @@
 name: Build Bitcoin Wallet v3.17
+
+on:
+  workflow_dispatch:
+
 env:
   ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
   SKIP_JDK_VERSION_CHECK: "true"
   ANDROID_HOME: /usr/local/lib/android/sdk
   MAVEN_HOME: /opt/maven-3.0.5
   PATH: /opt/maven-3.0.5/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-
-on:
-  workflow_dispatch:
 
 jobs:
   build:
@@ -27,11 +28,9 @@ jobs:
         run: |
           echo "=== Trước khi sửa ==="
           cat wallet/AndroidManifest.xml
-          # Thay luôn thành 33 ngay từ đầu, không sửa sau
           if grep -q "<uses-sdk" wallet/AndroidManifest.xml; then
             sed -i 's/<uses-sdk\([^>]*\)>/<uses-sdk\1 android:targetSdkVersion="33">/g' wallet/AndroidManifest.xml
           else
-            sed -i 's/<manifest /<manifest xmlns:android="http://schemas.android.com/apk/res\/android">/g' wallet/AndroidManifest.xml
             sed -i 's/<\/manifest>/<uses-sdk android:minSdkVersion="9" android:targetSdkVersion="33"\/><\/manifest>/g' wallet/AndroidManifest.xml
           fi
           echo "=== Sau khi sửa ==="
@@ -82,9 +81,37 @@ jobs:
           mkdir -p ~/.m2
           cat > ~/.m2/settings.xml << 'EOF'
 <settings>
-  <mirrors><mirror><id>https</id><url>https://repo.maven.apache.org/maven2</url><mirrorOf>central</mirrorOf></mirror></mirrors>
-  <profiles><profile><id>def</id><repositories><repository><id>c</id><url>https://repo.maven.apache.org/maven2</url></releases><enabled>true</enabled></releases></repository></repositories></profile></profiles>
-  <activeProfiles><activeProfile>def</activeProfile></activeProfiles>
+  <mirrors>
+    <mirror>
+      <id>central-https</id>
+      <url>https://repo.maven.apache.org/maven2</url>
+      <mirrorOf>central</mirrorOf>
+    </mirror>
+  </mirrors>
+  <profiles>
+    <profile>
+      <id>default</id>
+      <repositories>
+        <repository>
+          <id>central</id>
+          <url>https://repo.maven.apache.org/maven2</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+      </repositories>
+      <pluginRepositories>
+        <pluginRepository>
+          <id>central</id>
+          <url>https://repo.maven.apache.org/maven2</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>false</enabled></snapshots>
+        </pluginRepository>
+      </pluginRepositories>
+    </profile>
+  </profiles>
+  <activeProfiles>
+    <activeProfile>default</activeProfile>
+  </activeProfiles>
 </settings>
 EOF
 
@@ -98,7 +125,7 @@ EOF
       - name: Build dự án
         run: mvn clean install -pl :base,:integration-android,:wallet -am -q
 
-      - name: Đóng gói + Ký ĐÚNG chuẩn Android mới
+      - name: Đóng gói + Ký đủ chuẩn V1+V2+V3
         run: |
           BUILD26="$ANDROID_HOME/build-tools/26.0.3"
           BUILD33="$ANDROID_HOME/build-tools/33.0.2"
@@ -124,13 +151,11 @@ EOF
           cd "$GITHUB_WORKSPACE"
           $ZIPALIGN -f 4 unsigned.apk aligned.apk
 
-          # Tạo keystore an toàn hơn
           keytool -genkey -noprompt -keystore /tmp/debug.ks \
             -storepass android123 -alias debugkey -keypass android123 \
             -keyalg RSA -keysize 2048 -validity 10000 \
             -dname "CN=Test,O=Dev,C=VN"
 
-          # Ký đủ chuẩn V1+V2+V3 tương thích mọi phiên bản
           $SIGNER sign --ks /tmp/debug.ks \
             --ks-pass pass:android123 --key-pass pass:android123 \
             --ks-key-alias debugkey \
@@ -138,11 +163,11 @@ EOF
             --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true \
             --out "$OUT_APK" aligned.apk
 
-          echo "✅ Kết quả:"
+          echo "✅ Kiểm tra:"
           $SIGNER verify --verbose "$OUT_APK"
           $BUILD33/aapt dump badging "$OUT_APK" | grep -E "sdkVersion|package"
 
-      - name: Lưu APK
+      - name: Lưu APK kết quả
         uses: actions/upload-artifact@v4
         with:
           name: Bitcoin-Wallet-v3.17-APK
