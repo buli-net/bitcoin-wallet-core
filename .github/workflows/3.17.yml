@@ -24,7 +24,7 @@ jobs:
       - name: Checkout đúng commit 982c631
         run: git checkout 982c631
 
-      - name: Sửa targetSdkVersion=33 trong Manifest
+      - name: Sửa targetSdkVersion=33
         run: |
           if grep -q "<uses-sdk" wallet/AndroidManifest.xml; then
             sed -i 's/<uses-sdk\([^>]*\)>/<uses-sdk\1 android:targetSdkVersion="33">/g' wallet/AndroidManifest.xml
@@ -49,20 +49,11 @@ jobs:
 
       - name: Tạo script apkbuilder giả
         run: |
-          cat > $ANDROID_HOME/tools/apkbuilder << 'APKBUILDER_EOF'
+          cat > $ANDROID_HOME/tools/apkbuilder << 'EOF'
           #!/bin/bash
-          OUTPUT_APK=""
-          while [[ $# -gt 0 ]]; do
-            case "$1" in
-              /*.apk) OUTPUT_APK="$1"; shift;;
-              *) shift;;
-            esac
-          done
-          if [ -n "$OUTPUT_APK" ]; then
-            touch "$OUTPUT_APK"
-          fi
+          [ -n "$1" ] && touch "${@: -1}"
           exit 0
-          APKBUILDER_EOF
+          EOF
           chmod +x $ANDROID_HOME/tools/apkbuilder
 
       - name: Chuyển về Java 8
@@ -71,7 +62,7 @@ jobs:
           java-version: '8'
           distribution: 'zulu'
 
-      - name: Cài đặt Maven + HTTPS
+      - name: Cài đặt Maven
         run: |
           wget -q https://archive.apache.org/dist/maven/maven-3/3.0.5/binaries/apache-maven-3.0.5-bin.tar.gz
           tar -xzf apache-maven-3.0.5-bin.tar.gz -C /opt
@@ -81,91 +72,37 @@ jobs:
 <settings>
   <mirrors>
     <mirror>
-      <id>central-https</id>
+      <id>central</id>
       <url>https://repo.maven.apache.org/maven2</url>
       <mirrorOf>central</mirrorOf>
     </mirror>
   </mirrors>
-  <profiles>
-    <profile>
-      <id>default</id>
-      <repositories>
-        <repository>
-          <id>central</id>
-          <url>https://repo.maven.apache.org/maven2</url>
-          <releases><enabled>true</enabled></releases>
-          <snapshots><enabled>false</enabled></snapshots>
-        </repository>
-      </repositories>
-      <pluginRepositories>
-        <pluginRepository>
-          <id>central</id>
-          <url>https://repo.maven.apache.org/maven2</url>
-          <releases><enabled>true</enabled></releases>
-          <snapshots><enabled>false</enabled></snapshots>
-        </pluginRepository>
-      </pluginRepositories>
-    </profile>
-  </profiles>
-  <activeProfiles>
-    <activeProfile>default</activeProfile>
-  </activeProfiles>
 </settings>
 EOF
 
-      - name: Clone và build bitcoinj 0.10.1
+      - name: Build bitcoinj
         run: |
           git clone --depth 1 --branch v0.10.1 https://github.com/bitcoinj/bitcoinj.git /tmp/bitcoinj
           cd /tmp/bitcoinj
           git checkout b4a57eb8055a54fd3aab6133835d91d9967d9f98
           mvn clean install -DskipTests -q
 
-      - name: Build base + integration-android + wallet
+      - name: Build dự án
         run: mvn clean install -pl :base,:integration-android,:wallet -am -q
 
-      - name: Đóng gói + ký APK chuẩn
+      - name: Đóng gói & ký
         run: |
-          BUILD26="$ANDROID_HOME/build-tools/26.0.3"
-          BUILD33="$ANDROID_HOME/build-tools/33.0.2"
-          DX="$BUILD26/dx"
-          ZIPALIGN="$BUILD33/zipalign"
-          APK_SIGNER="$BUILD33/apksigner"
+          B26=$ANDROID_HOME/build-tools/26.0.3
+          B33=$ANDROID_HOME/build-tools/33.0.2
+          $B26/dx --dex --output=/tmp/classes.dex wallet/target/classes $(find ~/.m2/repository -name "*.jar" | grep -E "(bitcoinj-0\.10\.1|netty-3\.6\.3|protobuf-java-2\.4\.1|guava-13\.0\.1|scrypt-1\.3\.3|slf4j-api|logback-android)" | grep -v sources)
+          mkdir -p /tmp/apk && cd /tmp/apk && unzip -q $GITHUB_WORKSPACE/wallet/target/wallet-3.17-test.ap_ && cp /tmp/classes.dex .
+          zip -qr $GITHUB_WORKSPACE/unsigned.apk .
+          cd $GITHUB_WORKSPACE
+          $B33/zipalign -f 4 unsigned.apk aligned.apk
+          keytool -genkey -noprompt -keystore debug.ks -storepass android -alias d -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=D"
+          $B33/apksigner sign --ks debug.ks --ks-pass pass:android --key-pass pass:android --ks-key-alias d --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --out wallet/target/wallet-3.17-test.apk aligned.apk
 
-          APK_INPUT="wallet/target/wallet-3.17-test.ap_"
-          CLASSES_DIR="wallet/target/classes"
-          UNSIGNED_APK="wallet/target/wallet-3.17-test-unsigned.apk"
-          ALIGNED_APK="wallet/target/wallet-3.17-test-aligned.apk"
-          SIGNED_APK="wallet/target/wallet-3.17-test.apk"
-
-          rm -f "$UNSIGNED_APK" "$ALIGNED_APK" "$SIGNED_APK"
-
-          DEP_JARS=$(find ~/.m2/repository -name "*.jar" -type f | grep -E "(bitcoinj-0\.10\.1\.jar|netty-3\.6\.3|protobuf-java-2\.4\.1|guava-13\.0\.1|scrypt-1\.3\.3|slf4j-api-1\.7\.5|logback-android)" | grep -v sources | grep -v examples)
-          $DX --dex --output=/tmp/classes.dex "$CLASSES_DIR" $DEP_JARS
-
-          mkdir -p /tmp/apk-work
-          cd /tmp/apk-work
-          unzip -q "$GITHUB_WORKSPACE/$APK_INPUT"
-          cp /tmp/classes.dex classes.dex
-          zip -qr "$GITHUB_WORKSPACE/$UNSIGNED_APK" .
-
-          cd "$GITHUB_WORKSPACE"
-          $ZIPALIGN -f 4 "$UNSIGNED_APK" "$ALIGNED_APK"
-
-          if [ ! -f ~/.android/debug.keystore ]; then
-            mkdir -p ~/.android
-            keytool -genkey -noprompt -keystore ~/.android/debug.keystore \
-              -storepass android -alias androiddebugkey -keypass android \
-              -keyalg RSA -keysize 2048 -validity 10000 \
-              -dname "CN=Android Debug,O=Android,C=US"
-          fi
-
-          $APK_SIGNER sign --ks ~/.android/debug.keystore \
-            --ks-pass pass:android --key-pass pass:android \
-            --ks-key-alias androiddebugkey \
-            --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true \
-            --out "$SIGNED_APK" "$ALIGNED_APK"
-
-      - name: Lưu APK kết quả
+      - name: Lưu APK
         uses: actions/upload-artifact@v4
         with:
           name: Bitcoin-Wallet-v3.17-APK
