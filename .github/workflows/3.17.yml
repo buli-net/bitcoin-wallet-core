@@ -59,35 +59,56 @@ jobs:
           java-version: '8'
           distribution: 'zulu'
 
-      - name: Install Maven
+      - name: Install Maven + Fix HTTPS only
         run: |
           wget -q https://archive.apache.org/dist/maven/maven-3/3.0.5/binaries/apache-maven-3.0.5-bin.tar.gz
           tar -xzf apache-maven-3.0.5-bin.tar.gz -C /opt
           mv /opt/apache-maven-3.0.5 /opt/maven-3.0.5
+          
           mkdir -p ~/.m2
           cat > ~/.m2/settings.xml << 'EOF'
-          <settings>
-            <profiles>
-              <profile>
-                <id>central</id>
-                <repositories>
-                  <repository>
-                    <id>central</id>
-                    <url>https://repo.maven.apache.org/maven2</url>
-                  </repository>
-                </repositories>
-              </profile>
-            </profiles>
-            <activeProfiles>
-              <activeProfile>central</activeProfile>
-            </activeProfiles>
-          </settings>
-          EOF
+<settings>
+  <mirrors>
+    <mirror>
+      <id>central-https</id>
+      <name>Maven Central HTTPS</name>
+      <url>https://repo.maven.apache.org/maven2</url>
+      <mirrorOf>central</mirrorOf>
+    </mirror>
+  </mirrors>
+  <profiles>
+    <profile>
+      <id>default</id>
+      <repositories>
+        <repository>
+          <id>central</id>
+          <url>https://repo.maven.apache.org/maven2</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+      </repositories>
+      <pluginRepositories>
+        <pluginRepository>
+          <id>central</id>
+          <url>https://repo.maven.apache.org/maven2</url>
+          <releases><enabled>true</enabled></releases>
+          <snapshots><enabled>false</enabled></snapshots>
+        </pluginRepository>
+      </pluginRepositories>
+    </profile>
+  </profiles>
+  <activeProfiles>
+    <activeProfile>default</activeProfile>
+  </activeProfiles>
+</settings>
+EOF
+          mvn --version
 
-      - name: Build bitcoinj
+      - name: Build bitcoinj 0.10.1 (dùng commit đúng)
         run: |
-          git clone --depth 1 --branch v0.10.1 https://github.com/bitcoinj/bitcoinj.git /tmp/bitcoinj
+          git clone --depth 1 https://github.com/bitcoinj/bitcoinj.git /tmp/bitcoinj
           cd /tmp/bitcoinj
+          git checkout 1134572f61f5617622c93faf304edaec7815bb7b
           mvn clean install -DskipTests -q
 
       - name: Build project
