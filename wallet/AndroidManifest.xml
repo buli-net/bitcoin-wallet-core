@@ -96,7 +96,7 @@
             android:parentActivityName="wallet.ui.WalletActivity"
             android:theme="@style/My.Preference" />
       <!-- end create paper wallet-->
-        <!--  -->
+    
         <activity
             android:name="wallet.ui.WalletActivity"
             android:configChanges="keyboard|keyboardHidden"
@@ -124,7 +124,7 @@
             android:configChanges="keyboard|keyboardHidden"
             android:exported="true"
             android:label="@string/send_coins_activity_title"
-            android:theme="@style/My.Preference"
+            android:theme="@style/My.Theme"
             
             android:windowSoftInputMode="adjustResize">
             <intent-filter android:label="@string/send_coins_activity_title">
@@ -186,7 +186,7 @@
         <activity
             android:name="wallet.ui.preference.PreferenceActivity"
             android:label="@string/preferences_activity_title"
-            android:theme="@style/My.Preference" />
+            android:theme="@style/My.Theme" />
          <!--   android:theme="@android:style/Theme.Material.Light.DarkActionBar" /> -->
 
         <activity
