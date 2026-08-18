@@ -91,10 +91,11 @@
         <!-- Create paper wallet -->     
         <activity
             android:name="wallet.ui.PaperWalletActivity"
+            android:configChanges="keyboard|keyboardHidden"
             android:label="Create paper wallet"
             android:exported="false"
             android:parentActivityName="wallet.ui.WalletActivity"
-            android:theme="@style/My.Preference" />
+            android:theme="@style/My.Theme" />
       <!-- end create paper wallet-->
     
         <activity
@@ -186,7 +187,7 @@
         <activity
             android:name="wallet.ui.preference.PreferenceActivity"
             android:label="@string/preferences_activity_title"
-            android:theme="@style/My.Theme" />
+            android:theme="@style/My.Preference" />
          <!--   android:theme="@android:style/Theme.Material.Light.DarkActionBar" /> -->
 
         <activity
