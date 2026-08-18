@@ -96,14 +96,14 @@
             android:parentActivityName="wallet.ui.WalletActivity"
             android:theme="@style/My.Preference" />
       <!-- end create paper wallet-->
-        <!-- android:theme="@style/My.Theme.WithSplash"> -->
+        <!--  -->
         <activity
             android:name="wallet.ui.WalletActivity"
             android:configChanges="keyboard|keyboardHidden"
             android:exported="true"
             android:label="@string/app_name_short"
             android:launchMode="singleTask"
-            android:theme="@style/My.Preference">
+            android:theme="@style/My.Theme.WithSplash">
             
             <intent-filter android:label="@string/app_name_short">
                 <action android:name="android.intent.action.MAIN" />
