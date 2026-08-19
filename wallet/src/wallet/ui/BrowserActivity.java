@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.v4.media.session.MediaSessionCompat;
+import android.support.v4.media.session.PlaybackStateCompat;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.view.inputmethod.EditorInfo;
@@ -29,15 +31,15 @@ public class BrowserActivity extends AbstractWalletActivity {
     private ImageView btnGo;
     private FrameLayout rootLayout;
     
-    // ✅ FIX 1: LƯU TOÀN BỘ TRẠNG THÁI — KHÔNG BAO GIỜ MẤT
+    // Lưu trạng thái toàn cục — không bao giờ mất
     private static WebView staticWebView = null;
     private static String lastUrl = null;
-    private static boolean isInitialized = false;
 
     private View customView;
     private WebChromeClient.CustomViewCallback customViewCallback;
     private int originalSystemUiVisibility;
     private Intent serviceIntent;
+    private MediaSessionCompat mediaSession;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -56,7 +58,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         btnForwardWeb = findViewById(R.id.btn_forward_web);
         btnGo = findViewById(R.id.btn_go);
 
-        // ✅ FIX 2: NẾU ĐÃ CÓ WEBVIEW CŨ — GẮN LẠI, KHÔNG TẠO MỚI
+        // NẾU ĐÃ CÓ WEBVIEW CŨ — GẮN LẠI, KHÔNG TẠO MỚI
         if (staticWebView != null) {
             FrameLayout container = findViewById(R.id.webview_container);
             if (staticWebView.getParent() != null) {
@@ -67,11 +69,12 @@ public class BrowserActivity extends AbstractWalletActivity {
             urlBar.setText(lastUrl != null ? lastUrl : "");
             setupButtons();
             setupWebChromeClient();
-            return; // ✅ KHÔNG CHẠY TIẾP CODE INIT
+            initMediaSession();
+            return;
         }
 
-        // === CHỈ CHẠY LẦN ĐẦU TIÊN ===
-        webView = new WebView(getApplicationContext()); // ✅ Dùng Application context → không bị hủy
+        // CHỈ CHẠY LẦN ĐẦU TIÊN
+        webView = new WebView(getApplicationContext());
         webView.setLayoutParams(new FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
             FrameLayout.LayoutParams.MATCH_PARENT
@@ -91,6 +94,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
         webView.setKeepScreenOn(true);
         webView.setFocusable(true);
+        webView.setBackgroundColor(0); // Trong suốt — lấy màu nền theme
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -110,6 +114,7 @@ public class BrowserActivity extends AbstractWalletActivity {
 
         setupWebChromeClient();
         setupButtons();
+        initMediaSession();
 
         Intent intent = getIntent();
         if (intent.getData() != null) {
@@ -118,8 +123,16 @@ public class BrowserActivity extends AbstractWalletActivity {
             webView.loadUrl(url);
             lastUrl = url;
         }
+    }
 
-        isInitialized = true;
+    private void initMediaSession() {
+        mediaSession = new MediaSessionCompat(this, "BrowserMediaSession");
+        mediaSession.setActive(true);
+        PlaybackStateCompat state = new PlaybackStateCompat.Builder()
+            .setActions(PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE)
+            .setState(PlaybackStateCompat.STATE_PLAYING, 0, 1f)
+            .build();
+        mediaSession.setPlaybackState(state);
     }
 
     private void setupWebChromeClient() {
@@ -169,12 +182,26 @@ public class BrowserActivity extends AbstractWalletActivity {
         });
     }
 
-    // ✅ FIX 3: KHÔNG DỪNG VIDEO — BẮT SERVICE PHÁT NỀN
+    // ✅ QUAN TRỌNG: KHÔNG DỪNG — CHỐNG ANDROID 16 TẠM DỪNG
     @Override
     protected void onPause() {
         super.onPause();
-        // ❌ KHÔNG GỌI webView.onPause() — ĐỂ TRỐNG
-        // ✅ BẮT SERVICE — Android 16 BẮT BUỘC
+        // ❌ KHÔNG BAO GIỜ GỌI webView.onPause()
+        
+        // ✅ CHỐNG TỰ ĐỘNG DỪNG — trick then chốt
+        webView.onResume();
+        webView.resumeTimers();
+        
+        // ✅ Cập nhật MediaSession = đang phát
+        if (mediaSession != null) {
+            PlaybackStateCompat state = new PlaybackStateCompat.Builder()
+                .setActions(PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE)
+                .setState(PlaybackStateCompat.STATE_PLAYING, 0, 1f)
+                .build();
+            mediaSession.setPlaybackState(state);
+        }
+        
+        // ✅ Bắt Foreground Service
         serviceIntent = new Intent(this, BrowserBackgroundService.class);
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             startForegroundService(serviceIntent);
@@ -186,8 +213,10 @@ public class BrowserActivity extends AbstractWalletActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (webView != null) webView.onResume();
-        // ✅ DỪNG SERVICE KHI TRỞ LẠI
+        webView.onResume();
+        webView.resumeTimers();
+        
+        // Dừng Service khi quay lại
         if (serviceIntent != null) {
             stopService(serviceIntent);
             serviceIntent = null;
@@ -195,7 +224,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         if (lastUrl != null) urlBar.setText(lastUrl);
     }
 
-    // ✅ FIX 4: NÚT BACK — KHÔNG HỦY ACTIVITY, CHỈ QUAY VỀ VÍ
+    // ✅ NÚT BACK — KHÔNG ĐÓNG ACTIVITY, CHỈ QUAY VỀ VÍ
     @Override
     public void onBackPressed() {
         if (customView != null && customViewCallback != null) {
@@ -206,14 +235,12 @@ public class BrowserActivity extends AbstractWalletActivity {
             webView.goBack();
             return;
         }
-        // ✅ CHỈ QUAY VỀ MÀN HÌNH VÍ — KHÔNG GỌI super.onBackPressed(), KHÔNG GỌI finish()
         Intent walletIntent = new Intent(this, WalletActivity.class);
         walletIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         startActivity(walletIntent);
-        // ⚠️ KHÔNG ĐÓNG ACTIVITY NÀY → WebView vẫn sống → không reset
     }
 
-    // ✅ NÚT HOME TRÊN ACTION BAR — CŨNG CHỈ QUAY VỀ
+    // ✅ NÚT HOME TRÊN ACTION BAR
     @Override
     public boolean onOptionsItemSelected(android.view.MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
@@ -232,12 +259,15 @@ public class BrowserActivity extends AbstractWalletActivity {
     // ✅ CHỈ HỦY KHI ĐÓNG APP TỪ RECENTS
     @Override
     protected void onDestroy() {
+        if (mediaSession != null) {
+            mediaSession.release();
+            mediaSession = null;
+        }
         if (isFinishing() && staticWebView != null) {
             staticWebView.stopLoading();
             staticWebView.destroy();
             staticWebView = null;
             lastUrl = null;
-            isInitialized = false;
         }
         if (serviceIntent != null) stopService(serviceIntent);
         super.onDestroy();
@@ -272,16 +302,5 @@ public class BrowserActivity extends AbstractWalletActivity {
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(urlBar.getWindowToken(), 0);
         urlBar.clearFocus();
-    }
-
-    // ✅ RESET HOÀN TOÀN — CHỈ GỌI KHI MUỐN XÓA HẾT
-    public static void resetBrowser() {
-        if (staticWebView != null) {
-            staticWebView.stopLoading();
-            staticWebView.destroy();
-            staticWebView = null;
-        }
-        lastUrl = null;
-        isInitialized = false;
     }
 }
