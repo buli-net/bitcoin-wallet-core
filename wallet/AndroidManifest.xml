@@ -222,23 +222,20 @@
             android:windowSoftInputMode="adjustResize" />
         
   <!-- Web Browser Activity 2/2-->
-
-    <activity
+<activity
     android:name="wallet.ui.BrowserActivity"
     android:label="@string/menu_web_browser"
     android:theme="@style/My.Preference"
     android:exported="false"
-    android:parentActivityName="wallet.ui.WalletActivity"
     android:windowSoftInputMode="adjustResize"
     android:configChanges="orientation|screenSize|keyboardHidden"
-    android:launchMode="singleTask"  
-    android:alwaysRetainTaskState="true"
-    android:noHistory="false" />
+    android:launchMode="singleInstance" />
 
 <service
     android:name=".ui.BrowserBackgroundService"
     android:foregroundServiceType="mediaPlayback"
     android:exported="false" />
+
 
 
         
