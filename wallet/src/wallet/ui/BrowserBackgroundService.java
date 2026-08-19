@@ -18,7 +18,7 @@ public class BrowserBackgroundService extends Service {
     public void onCreate() {
         super.onCreate();
         createNotificationChannel();
-        // ✅ Foreground Service — Android 16 BẮT BUỘC
+        // ✅ Gọi NGAY — Android 16 bắt buộc trong 5 giây
         startForeground(NOTIFICATION_ID, buildNotification());
     }
 
@@ -36,23 +36,31 @@ public class BrowserBackgroundService extends Service {
     }
 
     private Notification buildNotification() {
-        return new NotificationCompat.Builder(this, CHANNEL_ID)
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Đang phát")
             .setContentText("Tiếp tục phát trong nền")
-            .setSmallIcon(android.R.drawable.ic_media_play) // ✅ Dùng icon hệ thống — KHÔNG BỊ LỖI
+            .setSmallIcon(android.R.drawable.ic_media_play)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setSilent(true)
             .setOngoing(true)
-            .build();
+            .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            builder.setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE);
+        }
+        return builder.build();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        return START_STICKY; // Giữ service chạy
+        return START_STICKY;
     }
 
     @Override
-    public IBinder onBind(Intent intent) { return null; }
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
 
     @Override
     public void onDestroy() {
