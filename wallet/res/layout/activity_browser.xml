@@ -4,8 +4,9 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="?android:attr/windowBackground">  <!-- ✅ Thêm android: -->
+    android:background="?android:attr/windowBackground">
 
+    <!-- Thanh công cụ trên cùng -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -20,7 +21,7 @@
             android:layout_height="40dp"
             android:src="@drawable/ic_back_white_24dp"
             android:tint="@color/fg_on_dark_bg_network_significant"
-            android:background="?android:attr/selectableItemBackground" />  <!-- ✅ Thêm android: + bỏ Borderless -->
+            android:background="?android:attr/selectableItemBackground" />
 
         <EditText
             android:id="@+id/url_bar"
@@ -31,7 +32,7 @@
             android:layout_marginEnd="8dp"
             android:hint="URL..."
             android:background="@drawable/edittext_background"
-            android:textColor="?android:attr/textColorPrimary"  <!-- ✅ Thêm android: -->
+            android:textColor="?android:attr/textColorPrimary"
             android:textSize="14sp"
             android:padding="8dp"
             android:inputType="textUri" />
@@ -42,9 +43,10 @@
             android:layout_height="40dp"
             android:src="@drawable/ic_go_white_24dp"
             android:tint="@color/fg_on_dark_bg_network_significant"
-            android:background="?android:attr/selectableItemBackground" />  <!-- ✅ Thêm android: + bỏ Borderless -->
+            android:background="?android:attr/selectableItemBackground" />
     </LinearLayout>
 
+    <!-- Nội dung web -->
     <WebView
         android:id="@+id/webview"
         android:layout_width="match_parent"
