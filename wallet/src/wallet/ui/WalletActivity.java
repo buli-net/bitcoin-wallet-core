@@ -344,13 +344,11 @@ public final class WalletActivity extends AbstractWalletActivity {
 // ==================================================
 // NEW: Open Web Browser
 // ==================================================
-if (itemId == R.id.menu_web_browser) {
-    // Launch the browser activity
-    final Intent intent = new Intent(WalletActivity.this, BrowserActivity.class);
-    startActivity(intent);
-    return true;
-}
-
+else if (itemId == R.id.menu_web_browser) {  // ✅ DÙNG else if, đặt ĐÚNG VỊ TRÍ
+     final Intent intent = new Intent(WalletActivity.this, BrowserActivity.class);
+     startActivity(intent);
+     return true;
+ }
 
 // end Launch the browser activity
                 
