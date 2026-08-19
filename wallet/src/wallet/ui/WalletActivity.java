@@ -348,7 +348,7 @@ else if (itemId == R.id.menu_web_browser) {  // ✅ DÙNG else if, đặt ĐÚNG
      final Intent intent = new Intent(WalletActivity.this, BrowserActivity.class);
      startActivity(intent);
      return true;
- }
+ 
 
 // end Launch the browser activity
                 
