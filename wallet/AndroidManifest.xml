@@ -225,7 +225,6 @@
     android:exported="false"
     android:parentActivityName="wallet.ui.WalletActivity"
     android:windowSoftInputMode="adjustResize"
-    <!-- ✅ Thêm dòng này → không reset khi xoay màn hình -->
     android:configChanges="orientation|screenSize|keyboardHidden" />
 <!-- end -->
 
