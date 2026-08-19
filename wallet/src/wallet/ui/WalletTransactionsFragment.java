@@ -312,11 +312,27 @@ public class WalletTransactionsFragment extends Fragment implements Transactions
         } else if (itemId == R.id.wallet_transactions_context_report_issue) {
             viewModel.showReportIssueDialog.setValue(new Event<>(transactionId));
             return true;
-        } else if (itemId == R.id.wallet_transactions_context_browse) {
+  /*      } else if (itemId == R.id.wallet_transactions_context_browse) {
             final Uri blockExplorerUri = config.getBlockExplorer();
             log.info("Viewing transaction {} on {}", transactionId, blockExplorerUri);
             activity.startExternalDocument(Uri.withAppendedPath(blockExplorerUri, "tx/" + transactionId.toString()));
+            return true; */
+   /////// mod trình duyệt nội bộ app
+
+        } else if (itemId == R.id.wallet_transactions_context_browse) {
+            final Uri blockExplorerUri = config.getBlockExplorer();
+            final Uri txUrl = Uri.withAppendedPath(blockExplorerUri, "tx/" + transactionId.toString());
+            log.info("Viewing transaction {} on {}", transactionId, txUrl);
+            
+            // ✅ Mở trình duyệt NỘI BỘ thay vì bên ngoài
+            Intent browseIntent = new Intent(activity, BrowserActivity.class);
+            browseIntent.setData(txUrl);
+            startActivity(browseIntent);
+            
             return true;
+
+//end///////
+                
         } else {
             return false;
         }
