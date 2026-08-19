@@ -6,15 +6,13 @@
     android:orientation="vertical"
     android:background="?android:attr/windowBackground">
 
-    
     <LinearLayout
         android:id="@+id/toolbar_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:padding="8dp"
-        android:gravity="center_vertical"
-        android:background="@color/bg_action_bar">
+        android:gravity="center_vertical">
 
         <ImageView
             android:id="@+id/btn_back_web"
@@ -56,12 +54,10 @@
             android:background="?android:attr/selectableItemBackground" />
     </LinearLayout>
 
-    <!-- ✅ Container có nền theo theme -->
     <FrameLayout
         android:id="@+id/webview_container"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:background="?android:attr/windowBackground" />
+        android:layout_weight="1" />
 
 </LinearLayout>
