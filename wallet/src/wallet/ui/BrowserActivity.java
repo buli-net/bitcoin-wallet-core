@@ -28,6 +28,8 @@ public class BrowserActivity extends AbstractWalletActivity {
     private ImageView btnForwardWeb;
     private ImageView btnGo;
     private FrameLayout rootLayout;
+    private static String lastUrl; // ✅ Lưu URL cuối cùng
+    private static boolean wasPlaying = false; // ✅ Đánh dấu đang phát
 
     // Hỗ trợ Fullscreen video
     private View customView;
@@ -52,19 +54,20 @@ public class BrowserActivity extends AbstractWalletActivity {
         btnForwardWeb = findViewById(R.id.btn_forward_web);
         btnGo = findViewById(R.id.btn_go);
 
-        // ✅ CẤU HÌNH PHÁT NỀN — ĐÃ THÊM
+        // ✅ CẤU HÌNH PHÁT NỀN — ĐÃ TỐI ƯU
         WebSettings webSettings = webView.getSettings();
         webSettings.setJavaScriptEnabled(true);
         webSettings.setDomStorageEnabled(true);
         webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webSettings.setAllowFileAccess(true);
         webSettings.setAllowContentAccess(true);
-        webSettings.setMediaPlaybackRequiresUserGesture(false); // ✅ Phát tự động
+        webSettings.setMediaPlaybackRequiresUserGesture(false); // ✅ Tự động phát
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
 
-        // Giữ WebView chạy khi ẩn
-        webView.setKeepScreenOn(false); // Có thể tắt màn hình vẫn phát
+        // ✅ NGĂN HỆ THỐNG TẠM DỪNG
+        webView.setKeepScreenOn(true); // Giữ WebView hoạt động
         webView.setFocusable(true);
+        webView.setFocusableInTouchMode(true);
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -72,7 +75,14 @@ public class BrowserActivity extends AbstractWalletActivity {
                 String url = request.getUrl().toString();
                 view.loadUrl(url);
                 urlBar.setText(url);
+                lastUrl = url; // ✅ Lưu URL hiện tại
                 return true;
+            }
+            
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                lastUrl = url; // ✅ Cập nhật khi trang tải xong
             }
         });
 
@@ -87,6 +97,7 @@ public class BrowserActivity extends AbstractWalletActivity {
                 customView = view;
                 customViewCallback = callback;
                 originalSystemUiVisibility = getWindow().getDecorView().getSystemUiVisibility();
+                wasPlaying = true; // ✅ Đánh dấu đang phát video
 
                 if (getActionBar() != null) getActionBar().hide();
                 getWindow().getDecorView().setSystemUiVisibility(
@@ -103,6 +114,7 @@ public class BrowserActivity extends AbstractWalletActivity {
                 if (customView == null) return;
                 rootLayout.removeView(customView);
                 customView = null;
+                wasPlaying = false; // ✅ Đã tắt fullscreen
 
                 if (getActionBar() != null) getActionBar().show();
                 getWindow().getDecorView().setSystemUiVisibility(originalSystemUiVisibility);
@@ -136,44 +148,72 @@ public class BrowserActivity extends AbstractWalletActivity {
             return false;
         });
 
-        // Khôi phục trạng thái
+        // ✅ KHÔNG TẠO LẠI — NẾU CÓ URL LƯU THÌ TẢI LẠI
         if (savedInstanceState != null) {
             webView.restoreState(savedInstanceState);
             String currentUrl = webView.getUrl();
             if (currentUrl != null) urlBar.setText(currentUrl);
+            lastUrl = currentUrl;
+        } else if (lastUrl != null) {
+            // ✅ TRƯỜNG HỢP VÀO LẠI → TẢI LẠI URL CŨ
+            urlBar.setText(lastUrl);
+            webView.loadUrl(lastUrl);
         } else {
             Intent intent = getIntent();
             if (intent.getData() != null) {
                 String url = intent.getData().toString();
                 urlBar.setText(url);
                 webView.loadUrl(url);
+                lastUrl = url;
             }
         }
     }
 
-    // ✅ QUAN TRỌNG — RA NỀN KHÔNG DỪNG VIDEO
+    // ✅ QUAN TRỌNG — KHÔNG ĐỂ HỆ THỐNG TẠM DỪNG
     @Override
     protected void onPause() {
         super.onPause();
-        // ❌ KHÔNG gọi webView.onPause() — nó sẽ dừng media
-        // webView.onPause(); // BỎ DÒNG NÀY
-        // ❌ KHÔNG gọi pauseTimers — dừng player
-        // webView.pauseTimers(); // BỎ DÒNG NÀY
+        // ❌ KHÔNG GỌI webView.onPause() — KHÔNG GỌI pauseTimers()
+        // → Để trống = WebView tiếp tục chạy trong nền
     }
 
-    // ✅ QUAY LẠI — TIẾP TỤC BÌNH THƯỜNG
+    // ✅ KHÔNG ĐỂ HỦY WEBVIEW KHI RA NỀN
+    @Override
+    protected void onStop() {
+        super.onStop();
+        // ❌ KHÔNG dừng, không hủy = tiếp tục phát
+    }
+
+    // ✅ QUAY LẠI — TIẾP TỤC PHÁT
     @Override
     protected void onResume() {
         super.onResume();
         webView.onResume();
-        // webView.resumeTimers(); // Không cần nếu không gọi pause
+        // Nếu đang phát → tiếp tục
+        if (wasPlaying && lastUrl != null && webView.getUrl() != null) {
+            // Không cần load lại — video vẫn đang phát
+        }
     }
 
-    // Lưu trạng thái
+    // ✅ LƯU TRẠNG THÁI TRƯỚC KHI BỊ HỦY
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         if (webView != null) webView.saveState(outState);
+        if (lastUrl != null) outState.putString("last_url", lastUrl);
+    }
+
+    // ✅ CHỈ DỌN DẸP KHI ĐÓNG HẲN
+    @Override
+    protected void onDestroy() {
+        // ❌ KHÔNG gọi khi chỉ ra nền — chỉ khi thực sự đóng Activity
+        if (isFinishing() && webView != null) {
+            webView.stopLoading();
+            webView.destroy();
+            lastUrl = null; // ✅ Reset chỉ khi đóng hẳn
+            wasPlaying = false;
+        }
+        super.onDestroy();
     }
 
     // Xử lý URL
@@ -190,6 +230,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         }
         webView.loadUrl(finalUrl);
         urlBar.setText(finalUrl);
+        lastUrl = finalUrl;
     }
 
     private boolean isValidUrl(String input) {
@@ -233,15 +274,5 @@ public class BrowserActivity extends AbstractWalletActivity {
         } else {
             super.onBackPressed();
         }
-    }
-
-    // ✅ DỌN DẸP KHI ĐÓNG HẲN — chỉ dừng khi thực sự đóng
-    @Override
-    protected void onDestroy() {
-        if (webView != null) {
-            webView.stopLoading();
-            webView.destroy();
-        }
-        super.onDestroy();
     }
 }
