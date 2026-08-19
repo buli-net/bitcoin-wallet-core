@@ -230,9 +230,9 @@
     android:theme="@style/My.Preference"
     android:exported="false"
     android:windowSoftInputMode="adjustResize"
-    android:configChanges="orientation|screenSize|keyboardHidden"
+    android:configChanges="orientation|screenSize|keyboardHidden|uiMode"
     android:launchMode="singleInstance"
-    android:hardwareAccelerated="true" /> 
+    android:hardwareAccelerated="true" />
 
 <service
     android:name=".ui.BrowserBackgroundService"
