@@ -12,10 +12,6 @@
         android:targetSdkVersion="34" />
 
 <!-- normal permissions -->
-<!-- trình duyệt 1/2 -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -222,7 +218,7 @@
             android:theme="@style/My.Theme"
             android:windowSoftInputMode="adjustResize" />
         
-  <!-- Web Browser Activity 2/2-->
+  <!-- Web Browser Activity -->
 
 <activity
     android:name="wallet.ui.BrowserActivity"
@@ -233,11 +229,6 @@
     android:configChanges="orientation|screenSize|keyboardHidden|uiMode"
     android:launchMode="singleInstance"
     android:hardwareAccelerated="true" />
-
-<service
-    android:name=".ui.BrowserBackgroundService"
-    android:foregroundServiceType="mediaPlayback"
-    android:exported="false" />
 
 
 <!-- end -->
