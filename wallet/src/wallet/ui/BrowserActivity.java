@@ -60,7 +60,6 @@ public class BrowserActivity extends AbstractWalletActivity {
         btnForwardWeb = findViewById(R.id.btn_forward_web);
         btnGo = findViewById(R.id.btn_go);
 
-        // ✅ CẬP NHẬT MÀU NGAY KHI MỞ APP
         updateThemeColors();
 
         if (staticWebView != null) {
@@ -85,54 +84,45 @@ public class BrowserActivity extends AbstractWalletActivity {
         staticWebView = webView;
 
         // ==================================================
-        // ✅ BẬT TẤT CẢ ĐỊNH DẠNG & TÍNH NĂNG WEB HIỆN ĐẠI
+        // ✅ BẬT TẤT CẢ ĐỊNH DẠNG WEB — ĐÃ BỎ setAppCacheEnabled
         // ==================================================
         WebSettings webSettings = webView.getSettings();
 
-        // 🔹 JavaScript & WebAssembly — TikTok, WebGL, game web
+        // JavaScript & WebAssembly — TikTok, WebGL, game web
         webSettings.setJavaScriptEnabled(true);
         webSettings.setAllowFileAccessFromFileURLs(true);
         webSettings.setAllowUniversalAccessFromFileURLs(true);
 
-        // 🔹 Lưu trữ dữ liệu — localStorage, IndexedDB, Cache, WebSQL
+        // Lưu trữ dữ liệu — localStorage, IndexedDB, WebSQL
         webSettings.setDomStorageEnabled(true);
         webSettings.setDatabaseEnabled(true);
         webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
-        webSettings.setAppCacheEnabled(true);
         webSettings.setAllowFileAccess(true);
         webSettings.setAllowContentAccess(true);
 
-        // 🔹 Media — TẤT CẢ định dạng video/audio HTML5
+        // Media — TẤT CẢ định dạng video/audio HTML5
         webSettings.setMediaPlaybackRequiresUserGesture(false);
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
 
-        // 🔹 Tăng tốc đồ họa — WebGL, Canvas, 3D
+        // Tăng tốc đồ họa — WebGL, Canvas, 3D
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         webSettings.setRenderPriority(WebSettings.RenderPriority.HIGH);
 
-        // 🔹 User Agent — nhận diện là trình duyệt di động thật
+        // User Agent — nhận diện là trình duyệt di động thật
         String ua = webSettings.getUserAgentString();
         webSettings.setUserAgentString(ua + " Chrome/120.0.0.0 Mobile");
 
-        // 🔹 Giao diện — Zoom, viewport, màn hình rộng
+        // Giao diện — Zoom, viewport
         webSettings.setSupportZoom(true);
         webSettings.setBuiltInZoomControls(true);
         webSettings.setDisplayZoomControls(false);
         webSettings.setUseWideViewPort(true);
         webSettings.setLoadWithOverviewMode(true);
 
-        // 🔹 Bảo mật & Popup
-        webSettings.setAllowFileAccess(true);
-        webSettings.setAllowContentAccess(true);
-        webSettings.setAllowFileAccessFromFileURLs(true);
-        webSettings.setAllowUniversalAccessFromFileURLs(true);
-
         webView.setFocusable(true);
         webView.setFocusableInTouchMode(true);
         webView.setBackgroundColor(0);
 
-        // ==================================================
-        // XỬ LÝ LINK — MỞ TRONG WEBVIEW
         // ==================================================
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -166,7 +156,6 @@ public class BrowserActivity extends AbstractWalletActivity {
     // ✅ ĐỔI MÀU TOÀN BỘ GIAO DIỆN — BAO GỒM Ô URL
     // ==================================================
     private void updateThemeColors() {
-        // Lấy màu từ theme hệ thống
         int[] windowAttrs = { android.R.attr.windowBackground };
         TypedArray ta = obtainStyledAttributes(windowAttrs);
         int bgColor = ta.getColor(0, 0xFFFFFFFF);
@@ -192,38 +181,31 @@ public class BrowserActivity extends AbstractWalletActivity {
         int iconTint = ta.getColor(0, 0xFFFFFFFF);
         ta.recycle();
 
-        // Cập nhật nền
         if (webViewContainer != null) webViewContainer.setBackgroundColor(bgColor);
         if (webView != null) webView.setBackgroundColor(bgColor);
         if (toolbarContainer != null) toolbarContainer.setBackgroundColor(toolbarColor);
 
-        // ✅ Ô URL — ĐỔI MÀU NGAY LẬP TỨC
         if (urlBar != null) {
             urlBar.setTextColor(textColor);
             urlBar.setHintTextColor(hintColor);
         }
 
-        // ✅ Nút bấm — đổi màu icon theo theme
         if (btnBackWeb != null) btnBackWeb.setColorFilter(iconTint);
         if (btnForwardWeb != null) btnForwardWeb.setColorFilter(iconTint);
         if (btnGo != null) btnGo.setColorFilter(iconTint);
 
-        // Cập nhật ActionBar
         if (getActionBar() != null) {
             getActionBar().setBackgroundDrawable(new ColorDrawable(toolbarColor));
         }
     }
 
-    // ✅ Đổi cấu hình → cập nhật màu ngay
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         updateThemeColors();
     }
 
-    // ==================================================
     // GIỮ MÀN SÁNG KHI XEM VIDEO TOÀN MÀN HÌNH
-    // ==================================================
     private void setupWebChromeClient() {
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
@@ -236,7 +218,6 @@ public class BrowserActivity extends AbstractWalletActivity {
                 customViewCallback = callback;
                 originalSystemUiVisibility = getWindow().getDecorView().getSystemUiVisibility();
                 
-                // ✅ Xem video → GIỮ MÀN SÁNG
                 getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                 
                 if (getActionBar() != null) getActionBar().hide();
@@ -251,7 +232,6 @@ public class BrowserActivity extends AbstractWalletActivity {
             public void onHideCustomView() {
                 if (customView == null) return;
                 
-                // ✅ Thoát toàn màn hình → BỎ GIỮ SÁNG
                 getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                 
                 rootLayout.removeView(customView);
@@ -279,19 +259,17 @@ public class BrowserActivity extends AbstractWalletActivity {
         });
     }
 
-    // ✅ CHUẨN: Ra nền → tạm dừng
     @Override
     protected void onPause() {
         super.onPause();
         webView.onPause();
     }
 
-    // ✅ Vào lại → tiếp tục + cập nhật màu
     @Override
     protected void onResume() {
         super.onResume();
         webView.onResume();
-        updateThemeColors(); // ✅ Đổi theme khi quay lại
+        updateThemeColors();
         if (lastUrl != null) urlBar.setText(lastUrl);
     }
 
