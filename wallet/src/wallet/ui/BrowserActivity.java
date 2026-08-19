@@ -4,8 +4,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.view.inputmethod.EditorInfo;
@@ -31,11 +29,10 @@ public class BrowserActivity extends AbstractWalletActivity {
     private ImageView btnGo;
     private FrameLayout rootLayout;
     
-    // ✅ Lưu trạng thái — không bị reset
+    // ✅ Lưu trạng thái toàn cục — không bị mất khi back
     private static String lastUrl = null;
-    private static long lastTime = 0;
-    private static boolean isServiceRunning = false;
-    private Intent serviceIntent;
+    private static Bundle savedState = null;
+    private static boolean isFirstCreate = true;
 
     private View customView;
     private WebChromeClient.CustomViewCallback customViewCallback;
@@ -44,16 +41,8 @@ public class BrowserActivity extends AbstractWalletActivity {
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
-        // ✅ Đã có instance → KHÔNG tạo lại
-        if (webView != null) {
-            setContentView(R.layout.activity_browser);
-            rebindViews();
-            urlBar.setText(lastUrl != null ? lastUrl : "");
-            return;
-        }
-
         setContentView(R.layout.activity_browser);
+
         rootLayout = (FrameLayout) findViewById(android.R.id.content);
 
         if (getActionBar() != null) {
@@ -67,7 +56,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         btnForwardWeb = findViewById(R.id.btn_forward_web);
         btnGo = findViewById(R.id.btn_go);
 
-        // ✅ CẤU HÌNH ANDROID 16
+        // ✅ CẤU HÌNH PHÁT NỀN
         WebSettings webSettings = webView.getSettings();
         webSettings.setJavaScriptEnabled(true);
         webSettings.setDomStorageEnabled(true);
@@ -76,11 +65,8 @@ public class BrowserActivity extends AbstractWalletActivity {
         webSettings.setAllowContentAccess(true);
         webSettings.setMediaPlaybackRequiresUserGesture(false);
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
-        
-        // ✅ Bypass Android 16 pause
         webView.setKeepScreenOn(true);
         webView.setFocusable(true);
-        webView.setFocusableInTouchMode(true);
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -89,15 +75,12 @@ public class BrowserActivity extends AbstractWalletActivity {
                 view.loadUrl(url);
                 urlBar.setText(url);
                 lastUrl = url;
-                lastTime = System.currentTimeMillis();
                 return true;
             }
-
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 lastUrl = url;
-                lastTime = System.currentTimeMillis();
             }
         });
 
@@ -111,7 +94,6 @@ public class BrowserActivity extends AbstractWalletActivity {
                 customView = view;
                 customViewCallback = callback;
                 originalSystemUiVisibility = getWindow().getDecorView().getSystemUiVisibility();
-
                 if (getActionBar() != null) getActionBar().hide();
                 getWindow().getDecorView().setSystemUiVisibility(
                     View.SYSTEM_UI_FLAG_FULLSCREEN |
@@ -120,7 +102,6 @@ public class BrowserActivity extends AbstractWalletActivity {
                 );
                 rootLayout.addView(view);
             }
-
             @Override
             public void onHideCustomView() {
                 if (customView == null) return;
@@ -133,39 +114,7 @@ public class BrowserActivity extends AbstractWalletActivity {
             }
         });
 
-        setupButtons();
-
-        // ✅ Khôi phục trạng thái cũ
-        if (savedInstanceState != null) {
-            webView.restoreState(savedInstanceState);
-            String current = webView.getUrl();
-            if (current != null) {
-                urlBar.setText(current);
-                lastUrl = current;
-            }
-        } else if (lastUrl != null) {
-            urlBar.setText(lastUrl);
-            webView.loadUrl(lastUrl);
-        } else {
-            Intent intent = getIntent();
-            if (intent.getData() != null) {
-                String url = intent.getData().toString();
-                urlBar.setText(url);
-                webView.loadUrl(url);
-                lastUrl = url;
-            }
-        }
-    }
-
-    private void rebindViews() {
-        urlBar = findViewById(R.id.url_bar);
-        btnBackWeb = findViewById(R.id.btn_back_web);
-        btnForwardWeb = findViewById(R.id.btn_forward_web);
-        btnGo = findViewById(R.id.btn_go);
-        setupButtons();
-    }
-
-    private void setupButtons() {
+        // Nút điều hướng
         btnBackWeb.setOnClickListener(v -> { if (webView.canGoBack()) webView.goBack(); });
         btnForwardWeb.setOnClickListener(v -> { if (webView.canGoForward()) webView.goForward(); });
         btnGo.setOnClickListener(v -> handleUrlInput());
@@ -178,68 +127,93 @@ public class BrowserActivity extends AbstractWalletActivity {
             }
             return false;
         });
+
+        // ✅ KHÔNG TẠO LẠI — KHÔNG RESET
+        if (savedState != null) {
+            webView.restoreState(savedState);
+            savedState = null;
+            if (lastUrl != null) urlBar.setText(lastUrl);
+        } else if (lastUrl != null) {
+            urlBar.setText(lastUrl);
+            String current = webView.getUrl();
+            if (current == null || !current.equals(lastUrl)) {
+                webView.loadUrl(lastUrl);
+            }
+        } else if (getIntent().getData() != null) {
+            String url = getIntent().getData().toString();
+            urlBar.setText(url);
+            webView.loadUrl(url);
+            lastUrl = url;
+        }
+        
+        isFirstCreate = false;
     }
 
-    // ✅ BẮT ĐẦU SERVICE KHI RA NỀN
+    // ✅ QUAN TRỌNG NHẤT — KHÔNG DỪNG VIDEO KHI RA NỀN
     @Override
     protected void onPause() {
         super.onPause();
-        // ❌ KHÔNG GỌI webView.onPause() — quan trọng nhất!
-        if (!isFinishing() && !isServiceRunning) {
-            serviceIntent = new Intent(this, BrowserBackgroundService.class);
-            if (android.os.Build.VERSION.SDK_INT >= 36) { // Android 16+
-                startForegroundService(serviceIntent);
-            } else {
-                startService(serviceIntent);
-            }
-            isServiceRunning = true;
-        }
+        // ❌ KHÔNG GỌI webView.onPause() — KHÔNG DỪNG MEDIA
+        // webView.onPause(); // ĐỂ COMMENT DÒNG NÀY
     }
 
-    // ✅ DỪNG SERVICE KHI TRỞ LẠI
     @Override
     protected void onResume() {
         super.onResume();
-        if (webView != null) webView.onResume();
-        if (isServiceRunning && serviceIntent != null) {
-            stopService(serviceIntent);
-            isServiceRunning = false;
-        }
+        webView.onResume();
+        if (lastUrl != null) urlBar.setText(lastUrl);
     }
 
-    @Override
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        setIntent(intent);
-        if (intent.getData() != null) {
-            String url = intent.getData().toString();
-            if (!url.equals(lastUrl) && webView != null) {
-                urlBar.setText(url);
-                webView.loadUrl(url);
-                lastUrl = url;
-            }
-        }
-    }
-
+    // ✅ LƯU TRẠNG THÁI TRƯỚC KHI BỊ CHE
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        if (webView != null) webView.saveState(outState);
+        webView.saveState(outState);
+        savedState = new Bundle(outState); // Lưu vào biến static
         if (lastUrl != null) outState.putString("last_url", lastUrl);
     }
 
-    // ✅ CHỈ HỦY KHI ĐÓNG HẲN
+    // ✅ NÚT BACK — KHÔNG ĐÓNG ACTIVITY, CHỈ QUAY LẠI MÀN HÌNH CHÍNH
+    @Override
+    public void onBackPressed() {
+        // Đóng fullscreen trước nếu đang mở
+        if (customView != null && customViewCallback != null) {
+            customViewCallback.onCustomViewHidden();
+            return;
+        }
+        
+        // ✅ KHÔNG finish() — chỉ quay về Activity cha (Wallet)
+        // → Activity Browser vẫn tồn tại, WebView không bị hủy
+        super.onBackPressed();
+        // ⚠️ KHÔNG GỌI finish() → KHÔNG HỦY → KHÔNG RESET
+    }
+
+    // ✅ NÚT HOME TRÊN ACTION BAR — CŨNG KHÔNG ĐÓNG
+    @Override
+    public boolean onOptionsItemSelected(android.view.MenuItem item) {
+        if (item.getItemId() == android.R.id.home) {
+            if (customView != null && customViewCallback != null) {
+                customViewCallback.onCustomViewHidden();
+                return true;
+            }
+            // ✅ KHÔNG finish() — chỉ quay về màn hình cha
+            super.onBackPressed();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    // ✅ CHỈ DỌN DẸP KHI THỰC SỰ ĐÓNG APP (không phải back)
     @Override
     protected void onDestroy() {
-        if (isFinishing() && webView != null) {
-            if (isServiceRunning && serviceIntent != null) {
-                stopService(serviceIntent);
-                isServiceRunning = false;
-            }
+        // Chỉ hủy khi hệ thống hủy hoàn toàn hoặc người dùng đóng từ Recents
+        if (isFinishing()) {
             webView.stopLoading();
             webView.destroy();
             webView = null;
             lastUrl = null;
+            savedState = null;
+            isFirstCreate = true;
         }
         super.onDestroy();
     }
@@ -273,30 +247,5 @@ public class BrowserActivity extends AbstractWalletActivity {
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(urlBar.getWindowToken(), 0);
         urlBar.clearFocus();
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(android.view.MenuItem item) {
-        if (item.getItemId() == android.R.id.home) {
-            if (customView != null && customViewCallback != null) {
-                customViewCallback.onCustomViewHidden();
-            }
-            finish();
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (customView != null && customViewCallback != null) {
-            customViewCallback.onCustomViewHidden();
-            return;
-        }
-        if (webView != null && webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
-        }
     }
 }
