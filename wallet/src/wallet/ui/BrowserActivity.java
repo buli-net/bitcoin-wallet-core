@@ -1,6 +1,5 @@
 package wallet.ui;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -10,29 +9,26 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.EditText;
-import androidx.appcompat.app.AppCompatActivity;
 import wallet.R;
 
-public class BrowserActivity extends AppCompatActivity {
+// ✅ DÙNG AbstractWalletActivity — KHỚP với WalletActivity & toàn bộ dự án
+public class BrowserActivity extends AbstractWalletActivity {
 
     private EditText urlBar;
     private WebView webView;
     private Button btnBack;
     private Button btnGo;
-    // ❌ Không có btnForward trong layout → xóa hoặc khai báo sau
-    // private Button btnForward;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_browser);
 
-        // Ánh xạ view — KHỚP với layout activity_browser.xml
+        // Ánh xạ view
         urlBar = findViewById(R.id.url_bar);
         webView = findViewById(R.id.webview);
         btnBack = findViewById(R.id.btn_back);
         btnGo = findViewById(R.id.btn_go);
-        // btnForward = findViewById(R.id.btn_forward); // ❌ Layout chưa có → comment/xóa
 
         // Cấu hình WebView
         webView.getSettings().setJavaScriptEnabled(true);
@@ -40,7 +36,7 @@ public class BrowserActivity extends AppCompatActivity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                // ✅ SỬA LỖI 2: Uri → String
+                // ✅ Đã sửa: Uri → String
                 view.loadUrl(request.getUrl().toString());
                 return true;
             }
@@ -63,7 +59,7 @@ public class BrowserActivity extends AppCompatActivity {
             }
         });
 
-        // Tải URL từ intent (nếu có)
+        // Tải URL từ Intent
         Intent intent = getIntent();
         if (intent.getData() != null) {
             String url = intent.getData().toString();
