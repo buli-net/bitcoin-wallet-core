@@ -5,11 +5,13 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
+import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.WebChromeClient;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -26,8 +28,9 @@ public class BrowserActivity extends AbstractWalletActivity {
     private ImageView btnForwardWeb;
     private ImageView btnGo;
 
-    // ✅ Lưu trạng thái riêng để khôi phục đúng
-    private boolean isWebViewRestored = false;
+    // ✅ Hỗ trợ Fullscreen video
+    private View customView;
+    private WebChromeClient.CustomViewCallback customViewCallback;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -45,10 +48,15 @@ public class BrowserActivity extends AbstractWalletActivity {
         btnForwardWeb = findViewById(R.id.btn_forward_web);
         btnGo = findViewById(R.id.btn_go);
 
-        // Cấu hình WebView
+        // ✅ Cấu hình WebView — Hỗ trợ video toàn màn hình
         webView.getSettings().setJavaScriptEnabled(true);
         webView.getSettings().setDomStorageEnabled(true);
-        webView.getSettings().setCacheMode(WebView.LOAD_DEFAULT); // ✅ Lưu cache
+        webView.getSettings().setCacheMode(WebView.LOAD_DEFAULT);
+        webView.getSettings().setAllowFileAccess(true);
+        webView.getSettings().setAllowContentAccess(true);
+        webView.getSettings().setMediaPlaybackRequiresUserGesture(false); // ✅ Tự động phát video
+
+        // ✅ WebViewClient — Cập nhật URL khi chuyển trang
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
@@ -56,6 +64,48 @@ public class BrowserActivity extends AbstractWalletActivity {
                 view.loadUrl(url);
                 urlBar.setText(url);
                 return true;
+            }
+        });
+
+        // ✅ WebChromeClient — HỖ TRỢ TOÀN MÀN HÌNH VIDEO
+        webView.setWebChromeClient(new WebChromeClient() {
+            // Bật toàn màn hình
+            @Override
+            public void onShowCustomView(View view, CustomViewCallback callback) {
+                if (customView != null) {
+                    customViewCallback.onCustomViewHidden();
+                    return;
+                }
+                customView = view;
+                customViewCallback = callback;
+
+                // Ẩn ActionBar & thanh trạng thái → toàn màn hình
+                if (getActionBar() != null) getActionBar().hide();
+                getWindow().getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_FULLSCREEN |
+                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                );
+
+                // Thêm view video toàn màn hình
+                setContentView(customView);
+            }
+
+            // Tắt toàn màn hình
+            @Override
+            public void onHideCustomView() {
+                if (customView == null) return;
+
+                // Khôi phục giao diện bình thường
+                setContentView(R.layout.activity_browser);
+                if (getActionBar() != null) getActionBar().show();
+                getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
+
+                customView = null;
+                customViewCallback.onCustomViewHidden();
+
+                // ✅ Tải lại trạng thái sau khi thoát fullscreen
+                rebindViews();
             }
         });
 
@@ -83,15 +133,12 @@ public class BrowserActivity extends AbstractWalletActivity {
             return false;
         });
 
-        // ✅ KHÔNG reset WebView khi có trạng thái đã lưu
+        // ✅ KHÔNG mất trang khi xoay màn hình — configChanges đã ngăn tạo lại Activity
         if (savedInstanceState != null) {
             webView.restoreState(savedInstanceState);
-            isWebViewRestored = true;
-            // Cập nhật URL hiển thị từ WebView
             String currentUrl = webView.getUrl();
             if (currentUrl != null) urlBar.setText(currentUrl);
         } else {
-            // Lần mở đầu / từ Intent
             Intent intent = getIntent();
             if (intent.getData() != null) {
                 String url = intent.getData().toString();
@@ -101,32 +148,25 @@ public class BrowserActivity extends AbstractWalletActivity {
         }
     }
 
-    // ✅ TẠM DỪNG — LƯU TRẠNG THÁI TRƯỚC KHI VỀ VÍ CHÍNH
-    @Override
-    protected void onPause() {
-        super.onPause();
-        // Không hủy WebView — giữ nguyên trạng thái
-        isWebViewRestored = false; // đánh dấu cần khôi phục khi quay lại
+    // ✅ Khôi phục tham chiếu view sau khi thoát fullscreen
+    private void rebindViews() {
+        urlBar = findViewById(R.id.url_bar);
+        webView = findViewById(R.id.webview);
+        btnBackWeb = findViewById(R.id.btn_back_web);
+        btnForwardWeb = findViewById(R.id.btn_forward_web);
+        btnGo = findViewById(R.id.btn_go);
     }
 
-    // ✅ QUAY LẠI — KHÔI PHỤC TRẠNG THÁI WEB
-    @Override
-    protected void onResume() {
-        super.onResume();
-        // Nếu đã có trang trước → cập nhật URL
-        if (webView != null && webView.getUrl() != null) {
-            urlBar.setText(webView.getUrl());
-        }
-    }
-
-    // ✅ LƯU TRẠNG THÁI KHI HỆ THỐNG TẠI TẠO
+    // ✅ Lưu trạng thái khi xoay màn hình / tạm dừng
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        webView.saveState(outState); // ✅ Lưu toàn bộ lịch sử + trang hiện tại
+        if (webView != null) {
+            webView.saveState(outState);
+        }
     }
 
-    // ✅ XỬ LÝ URL — HỢP LỆ → DUYỆT, SAI → TÌM GOOGLE
+    // ✅ XỬ LÝ URL — Hợp lệ → duyệt, sai → tìm Google
     private void handleUrlInput() {
         String input = urlBar.getText().toString().trim();
         hideKeyboard();
@@ -135,28 +175,23 @@ public class BrowserActivity extends AbstractWalletActivity {
 
         String finalUrl;
 
-        // Kiểm tra xem input có phải URL hợp lệ không
         if (isValidUrl(input)) {
-            // Đảm bảo có http/https
             if (!input.startsWith("http://") && !input.startsWith("https://")) {
                 finalUrl = "https://" + input;
             } else {
                 finalUrl = input;
             }
         } else {
-            // ❌ Không phải URL → Tìm kiếm Google
             finalUrl = "https://www.google.com/search?q=" + Uri.encode(input);
         }
 
         webView.loadUrl(finalUrl);
-        urlBar.setText(finalUrl); // Cập nhật ô URL thành link cuối
+        urlBar.setText(finalUrl);
     }
 
-    // Kiểm tra định dạng URL hợp lệ
     private boolean isValidUrl(String input) {
-        if (!input.contains(".") || input.contains(" ")) return false; // Có dấu chấm + không có khoảng trắng
+        if (!input.contains(".") || input.contains(" ")) return false;
         try {
-            // Thêm scheme tạm để kiểm tra
             String check = input.startsWith("http") ? input : "https://" + input;
             URI uri = new URI(check);
             return uri.getHost() != null && uri.getHost().contains(".");
@@ -165,26 +200,34 @@ public class BrowserActivity extends AbstractWalletActivity {
         }
     }
 
-    // Ẩn bàn phím
     private void hideKeyboard() {
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(urlBar.getWindowToken(), 0);
         urlBar.clearFocus();
     }
 
-    // Nút trên ActionBar — Luôn về ví chính
+    // ✅ Nút trên ActionBar — Luôn về ví chính
     @Override
     public boolean onOptionsItemSelected(android.view.MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
-            finish(); // ✅ Về ví chính, WebView được lưu tự động
+            // Nếu đang fullscreen → thoát trước khi đóng
+            if (customView != null && customViewCallback != null) {
+                customViewCallback.onCustomViewHidden();
+            }
+            finish();
             return true;
         }
         return super.onOptionsItemSelected(item);
     }
 
-    // Nút Back hệ thống
+    // ✅ Nút Back hệ thống
     @Override
     public void onBackPressed() {
+        // Nếu đang fullscreen → thoát fullscreen trước
+        if (customView != null && customViewCallback != null) {
+            customViewCallback.onCustomViewHidden();
+            return;
+        }
         if (webView.canGoBack()) {
             webView.goBack();
         } else {
