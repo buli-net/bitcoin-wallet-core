@@ -228,7 +228,8 @@
     android:exported="false"
     android:parentActivityName="wallet.ui.WalletActivity"
     android:windowSoftInputMode="adjustResize"
-    android:configChanges="orientation|screenSize|keyboardHidden" />
+    android:configChanges="orientation|screenSize|keyboardHidden" 
+    android:launchMode="singleTop" />
 
 <!--  Service phát nền 3/3 -->
 <service
@@ -237,6 +238,7 @@
     android:exported="false" />
 
 <!-- end -->
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.file_attachment"
