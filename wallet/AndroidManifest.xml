@@ -217,6 +217,13 @@
             android:label="@string/sweep_wallet_activity_title"
             android:theme="@style/My.Theme"
             android:windowSoftInputMode="adjustResize" />
+                <!-- Web Browser Activity -->
+        <activity
+            android:name=".ui.BrowserActivity"
+            android:label="@string/menu_web_browser"
+            android:theme="@style/My.Preference"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
