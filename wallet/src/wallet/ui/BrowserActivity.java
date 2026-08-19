@@ -4,20 +4,17 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.drawable.ColorDrawable;
-import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.FrameLayout;
-import android.widget.LinearLayout;
-import android.view.inputmethod.EditorInfo;
-import android.view.inputmethod.InputMethodManager;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.EditText;
 import android.widget.ImageView;
 import wallet.R;
@@ -42,9 +39,6 @@ public class BrowserActivity extends AbstractWalletActivity {
     private View customView;
     private WebChromeClient.CustomViewCallback customViewCallback;
     private int originalSystemUiVisibility;
-    private Intent serviceIntent;
-    private AudioManager audioManager;
-    private AudioManager.OnAudioFocusChangeListener afChangeListener;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -54,7 +48,6 @@ public class BrowserActivity extends AbstractWalletActivity {
         rootLayout = (FrameLayout) findViewById(android.R.id.content);
         webViewContainer = findViewById(R.id.webview_container);
         toolbarContainer = findViewById(R.id.toolbar_container);
-        audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
         if (getActionBar() != null) {
             getActionBar().setDisplayHomeAsUpEnabled(true);
@@ -89,19 +82,40 @@ public class BrowserActivity extends AbstractWalletActivity {
         webViewContainer.addView(webView);
         staticWebView = webView;
 
+        // ==============================================
+        // CẤU HÌNH ĐẦY ĐỦ — HỖ TRỢ TIKTOK + HTML5 + TẤT CẢ
+        // ==============================================
         WebSettings webSettings = webView.getSettings();
+
         webSettings.setJavaScriptEnabled(true);
+        webSettings.setAllowFileAccessFromFileURLs(true);
+        webSettings.setAllowUniversalAccessFromFileURLs(true);
+
         webSettings.setDomStorageEnabled(true);
+        webSettings.setDatabaseEnabled(true);
         webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        webSettings.setAppCacheEnabled(true);
         webSettings.setAllowFileAccess(true);
         webSettings.setAllowContentAccess(true);
+
         webSettings.setMediaPlaybackRequiresUserGesture(false);
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
-        webView.setKeepScreenOn(true);
+
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        webSettings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+
+        String ua = webSettings.getUserAgentString();
+        webSettings.setUserAgentString(ua + " Chrome/120.0.0.0 Mobile");
+
+        webSettings.setSupportZoom(true);
+        webSettings.setBuiltInZoomControls(true);
+        webSettings.setDisplayZoomControls(false);
+        webSettings.setUseWideViewPort(true);
+        webSettings.setLoadWithOverviewMode(true);
+
         webView.setFocusable(true);
         webView.setFocusableInTouchMode(true);
         webView.setBackgroundColor(0);
-        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -131,22 +145,37 @@ public class BrowserActivity extends AbstractWalletActivity {
         }
     }
 
-    // ✅ ĐÃ FIX LỖI BIÊN DỊCH — CHỈ DÙNG android.R.attr
+    // ĐỔI MÀU TOÀN BỘ GIAO DIỆN THEO THEME — BAO GỒM Ô URL
     private void updateThemeColors() {
         int[] windowAttrs = { android.R.attr.windowBackground };
         android.content.res.TypedArray ta = obtainStyledAttributes(windowAttrs);
         int bgColor = ta.getColor(0, 0xFFFFFFFF);
         ta.recycle();
-        
+
         int[] actionBarAttrs = { android.R.attr.colorPrimary };
         ta = obtainStyledAttributes(actionBarAttrs);
         int toolbarColor = ta.getColor(0, 0xFF212121);
         ta.recycle();
-        
+
+        int[] textColorAttrs = { android.R.attr.textColorPrimary };
+        ta = obtainStyledAttributes(textColorAttrs);
+        int textColor = ta.getColor(0, 0xFF000000);
+        ta.recycle();
+
+        int[] hintColorAttrs = { android.R.attr.textColorHint };
+        ta = obtainStyledAttributes(hintColorAttrs);
+        int hintColor = ta.getColor(0, 0xFF888888);
+        ta.recycle();
+
         if (webViewContainer != null) webViewContainer.setBackgroundColor(bgColor);
         if (webView != null) webView.setBackgroundColor(bgColor);
         if (toolbarContainer != null) toolbarContainer.setBackgroundColor(toolbarColor);
-        
+
+        if (urlBar != null) {
+            urlBar.setTextColor(textColor);
+            urlBar.setHintTextColor(hintColor);
+        }
+
         if (getActionBar() != null) {
             getActionBar().setBackgroundDrawable(new ColorDrawable(toolbarColor));
         }
@@ -158,6 +187,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         updateThemeColors();
     }
 
+    // GIỮ MÀN SÁNG KHI XEM VIDEO TOÀN MÀN HÌNH
     private void setupWebChromeClient() {
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
@@ -169,6 +199,9 @@ public class BrowserActivity extends AbstractWalletActivity {
                 customView = view;
                 customViewCallback = callback;
                 originalSystemUiVisibility = getWindow().getDecorView().getSystemUiVisibility();
+                
+                getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                
                 if (getActionBar() != null) getActionBar().hide();
                 getWindow().getDecorView().setSystemUiVisibility(
                     View.SYSTEM_UI_FLAG_FULLSCREEN |
@@ -180,6 +213,9 @@ public class BrowserActivity extends AbstractWalletActivity {
             @Override
             public void onHideCustomView() {
                 if (customView == null) return;
+                
+                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                
                 rootLayout.removeView(customView);
                 customView = null;
                 if (getActionBar() != null) getActionBar().show();
@@ -205,47 +241,19 @@ public class BrowserActivity extends AbstractWalletActivity {
         });
     }
 
+    // CHUẨN: Ra nền → tạm dừng
     @Override
     protected void onPause() {
         super.onPause();
-        webView.onResume();
-        webView.resumeTimers();
-        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-        webView.requestFocus();
-        webView.setWillNotDraw(false);
-        
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        
-        afChangeListener = focusChange -> {};
-        audioManager.requestAudioFocus(afChangeListener,
-            AudioManager.STREAM_MUSIC,
-            AudioManager.AUDIOFOCUS_GAIN);
-        
-        serviceIntent = new Intent(this, BrowserBackgroundService.class);
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent);
-        } else {
-            startService(serviceIntent);
-        }
+        webView.onPause();
     }
 
+    // Vào lại → tiếp tục
     @Override
     protected void onResume() {
         super.onResume();
         webView.onResume();
-        webView.resumeTimers();
-        webView.requestFocus();
         updateThemeColors();
-        
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        if (afChangeListener != null) {
-            audioManager.abandonAudioFocus(afChangeListener);
-            afChangeListener = null;
-        }
-        if (serviceIntent != null) {
-            stopService(serviceIntent);
-            serviceIntent = null;
-        }
         if (lastUrl != null) urlBar.setText(lastUrl);
     }
 
@@ -287,14 +295,16 @@ public class BrowserActivity extends AbstractWalletActivity {
             staticWebView = null;
             lastUrl = null;
         }
-        if (afChangeListener != null) audioManager.abandonAudioFocus(afChangeListener);
-        if (serviceIntent != null) stopService(serviceIntent);
         super.onDestroy();
     }
 
     private void handleUrlInput() {
         String input = urlBar.getText().toString().trim();
-        hideKeyboard();
+        android.view.inputmethod.InputMethodManager imm =
+            (android.view.inputmethod.InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.hideSoftInputFromWindow(urlBar.getWindowToken(), 0);
+        urlBar.clearFocus();
+        
         if (input.isEmpty()) return;
         String finalUrl;
         if (isValidUrl(input)) {
@@ -315,11 +325,5 @@ public class BrowserActivity extends AbstractWalletActivity {
         } catch (URISyntaxException e) {
             return false;
         }
-    }
-
-    private void hideKeyboard() {
-        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        imm.hideSoftInputFromWindow(urlBar.getWindowToken(), 0);
-        urlBar.clearFocus();
     }
 }
