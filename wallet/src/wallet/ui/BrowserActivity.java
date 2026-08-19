@@ -4,8 +4,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.v4.media.session.MediaSessionCompat;
-import android.support.v4.media.session.PlaybackStateCompat;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.view.inputmethod.EditorInfo;
@@ -39,7 +37,6 @@ public class BrowserActivity extends AbstractWalletActivity {
     private WebChromeClient.CustomViewCallback customViewCallback;
     private int originalSystemUiVisibility;
     private Intent serviceIntent;
-    private MediaSessionCompat mediaSession;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -69,7 +66,6 @@ public class BrowserActivity extends AbstractWalletActivity {
             urlBar.setText(lastUrl != null ? lastUrl : "");
             setupButtons();
             setupWebChromeClient();
-            initMediaSession();
             return;
         }
 
@@ -114,7 +110,6 @@ public class BrowserActivity extends AbstractWalletActivity {
 
         setupWebChromeClient();
         setupButtons();
-        initMediaSession();
 
         Intent intent = getIntent();
         if (intent.getData() != null) {
@@ -123,16 +118,6 @@ public class BrowserActivity extends AbstractWalletActivity {
             webView.loadUrl(url);
             lastUrl = url;
         }
-    }
-
-    private void initMediaSession() {
-        mediaSession = new MediaSessionCompat(this, "BrowserMediaSession");
-        mediaSession.setActive(true);
-        PlaybackStateCompat state = new PlaybackStateCompat.Builder()
-            .setActions(PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE)
-            .setState(PlaybackStateCompat.STATE_PLAYING, 0, 1f)
-            .build();
-        mediaSession.setPlaybackState(state);
     }
 
     private void setupWebChromeClient() {
@@ -182,26 +167,18 @@ public class BrowserActivity extends AbstractWalletActivity {
         });
     }
 
-    // ✅ QUAN TRỌNG: KHÔNG DỪNG — CHỐNG ANDROID 16 TẠM DỪNG
+    // ✅ QUAN TRỌNG: CHỐNG ANDROID 16 TẠM DỪNG — KHÔNG CẦN THƯ VIỆN NGOÀI
     @Override
     protected void onPause() {
         super.onPause();
         // ❌ KHÔNG BAO GIỜ GỌI webView.onPause()
         
-        // ✅ CHỐNG TỰ ĐỘNG DỪNG — trick then chốt
+        // ✅ TRICK THEN CHỐT: Gọi onResume() NGAY TRONG onPause()
+        // → Chống hệ thống tự động tạm dừng WebView/media
         webView.onResume();
         webView.resumeTimers();
         
-        // ✅ Cập nhật MediaSession = đang phát
-        if (mediaSession != null) {
-            PlaybackStateCompat state = new PlaybackStateCompat.Builder()
-                .setActions(PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE)
-                .setState(PlaybackStateCompat.STATE_PLAYING, 0, 1f)
-                .build();
-            mediaSession.setPlaybackState(state);
-        }
-        
-        // ✅ Bắt Foreground Service
+        // ✅ Bắt Foreground Service — Android 16 bắt buộc
         serviceIntent = new Intent(this, BrowserBackgroundService.class);
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             startForegroundService(serviceIntent);
@@ -259,10 +236,6 @@ public class BrowserActivity extends AbstractWalletActivity {
     // ✅ CHỈ HỦY KHI ĐÓNG APP TỪ RECENTS
     @Override
     protected void onDestroy() {
-        if (mediaSession != null) {
-            mediaSession.release();
-            mediaSession = null;
-        }
         if (isFinishing() && staticWebView != null) {
             staticWebView.stopLoading();
             staticWebView.destroy();
