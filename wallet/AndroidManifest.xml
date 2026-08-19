@@ -217,16 +217,20 @@
             android:label="@string/sweep_wallet_activity_title"
             android:theme="@style/My.Theme"
             android:windowSoftInputMode="adjustResize" />
+        
   <!-- Web Browser Activity -->
-<activity
+
+        <activity
     android:name="wallet.ui.BrowserActivity"
     android:label="@string/menu_web_browser"
     android:theme="@style/My.Preference"
     android:exported="false"
     android:parentActivityName="wallet.ui.WalletActivity"
     android:windowSoftInputMode="adjustResize"
-    android:configChanges="orientation|screenSize|keyboardHidden" 
-    android:launchMode="singleTop" />
+    android:configChanges="orientation|screenSize|keyboardHidden"
+    android:launchMode="singleTask" 
+    android:alwaysRetainTaskState="true" /> 
+
 
 <!-- end -->
 
