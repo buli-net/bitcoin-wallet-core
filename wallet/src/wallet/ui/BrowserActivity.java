@@ -3,12 +3,14 @@ package wallet.ui;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
+import android.graphics.drawable.ColorDrawable;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.WebResourceRequest;
@@ -32,6 +34,7 @@ public class BrowserActivity extends AbstractWalletActivity {
     private ImageView btnGo;
     private FrameLayout rootLayout;
     private FrameLayout webViewContainer;
+    private LinearLayout toolbarContainer; // ✅ Thanh công cụ
     
     private static WebView staticWebView = null;
     private static String lastUrl = null;
@@ -50,6 +53,7 @@ public class BrowserActivity extends AbstractWalletActivity {
 
         rootLayout = (FrameLayout) findViewById(android.R.id.content);
         webViewContainer = findViewById(R.id.webview_container);
+        toolbarContainer = findViewById(R.id.toolbar_container); // ✅ Ánh xạ thanh công cụ
         audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
         if (getActionBar() != null) {
@@ -62,7 +66,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         btnForwardWeb = findViewById(R.id.btn_forward_web);
         btnGo = findViewById(R.id.btn_go);
 
-        // ✅ Cập nhật màu nền lần đầu
+        // ✅ Cập nhật màu theme lần đầu
         updateThemeColors();
 
         // Nếu đã có WebView cũ — gắn lại
@@ -98,7 +102,8 @@ public class BrowserActivity extends AbstractWalletActivity {
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
         webView.setKeepScreenOn(true);
         webView.setFocusable(true);
-        webView.setBackgroundColor(0); // Trong suốt — lấy màu từ container
+        webView.setFocusableInTouchMode(true);
+        webView.setBackgroundColor(0);
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
         webView.setWebViewClient(new WebViewClient() {
@@ -129,22 +134,37 @@ public class BrowserActivity extends AbstractWalletActivity {
         }
     }
 
-    // ✅ FIX 1: CẬP NHẬT MÀU NỀN THEO THEME
+    // ✅ FIX 1: CẬP NHẬT CẢ THANH CÔNG CỤ + NỀN THEO THEME
     private void updateThemeColors() {
-        int[] attrs = { android.R.attr.windowBackground };
-        android.content.res.TypedArray ta = obtainStyledAttributes(attrs);
+        // Lấy màu nền cửa sổ từ theme
+        int[] windowAttrs = { android.R.attr.windowBackground };
+        android.content.res.TypedArray ta = obtainStyledAttributes(windowAttrs);
         int bgColor = ta.getColor(0, 0xFFFFFFFF);
         ta.recycle();
         
+        // Lấy màu action bar từ theme
+        int[] actionBarAttrs = { android.R.attr.colorPrimary, R.attr.colorPrimary };
+        ta = obtainStyledAttributes(actionBarAttrs);
+        int toolbarColor = ta.getColor(0, ta.getColor(1, 0xFF212121));
+        ta.recycle();
+        
+        // ✅ Cập nhật nền WebView
         if (webViewContainer != null) webViewContainer.setBackgroundColor(bgColor);
         if (webView != null) webView.setBackgroundColor(bgColor);
+        
+        // ✅ Cập nhật thanh công cụ — đổi màu NGAY
+        if (toolbarContainer != null) toolbarContainer.setBackgroundColor(toolbarColor);
+        
+        // ✅ Cập nhật ActionBar trên cùng
+        if (getActionBar() != null) {
+            getActionBar().setBackgroundDrawable(new ColorDrawable(toolbarColor));
+        }
     }
 
-    // ✅ GỌI KHI ĐỔI THEME (vì có uiMode trong configChanges)
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        updateThemeColors(); // Cập nhật màu nền ngay
+        updateThemeColors(); // Đổi màu NGAY khi đổi theme
     }
 
     private void setupWebChromeClient() {
@@ -194,23 +214,26 @@ public class BrowserActivity extends AbstractWalletActivity {
         });
     }
 
-    // ✅ FIX 2: PHÁT NỀN ANDROID 16 — AUDIO FOCUS + KEEP SCREEN ON
+    // ✅ FIX 2: PHÁT NỀN ANDROID 16 — GIỮ FOCUS + KÍCH HOẠT RENDER
     @Override
     protected void onPause() {
         super.onPause();
         // ❌ KHÔNG GỌI webView.onPause()
         
-        // 4 TRICK THEN CHỐT
+        // 5 TRICK THEN CHỐT CHO ANDROID 16
         webView.onResume();
         webView.resumeTimers();
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); // Giữ hoạt động
+        webView.requestFocus(); // ✅ GIỮ FOCUS — hệ thống không tắt
+        webView.setWillNotDraw(false); // ✅ TIẾP TỤC RENDER
         
-        // ✅ YÊU CẦU AUDIO FOCUS — Bảo Android 16: "Đang phát media!"
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        
+        // ✅ Yêu cầu Audio Focus
         afChangeListener = focusChange -> {};
         audioManager.requestAudioFocus(afChangeListener,
             AudioManager.STREAM_MUSIC,
-            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+            AudioManager.AUDIOFOCUS_GAIN);
         
         // ✅ Bắt Foreground Service
         serviceIntent = new Intent(this, BrowserBackgroundService.class);
@@ -226,9 +249,9 @@ public class BrowserActivity extends AbstractWalletActivity {
         super.onResume();
         webView.onResume();
         webView.resumeTimers();
+        webView.requestFocus();
         updateThemeColors(); // Cập nhật màu khi quay lại
         
-        // ✅ BỎ KEEP SCREEN ON + NHẢ AUDIO FOCUS
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         if (afChangeListener != null) {
             audioManager.abandonAudioFocus(afChangeListener);
