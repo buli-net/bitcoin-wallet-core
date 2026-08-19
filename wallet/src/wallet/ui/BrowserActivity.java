@@ -7,28 +7,33 @@ import android.view.View;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import wallet.R;
 
-// ✅ DÙNG AbstractWalletActivity — KHỚP với WalletActivity & toàn bộ dự án
 public class BrowserActivity extends AbstractWalletActivity {
 
+    // ✅ Đã sửa: Button → ImageView (KHỚP với layout XML)
     private EditText urlBar;
     private WebView webView;
-    private Button btnBack;
-    private Button btnGo;
+    private ImageView btnBack;
+    private ImageView btnGo;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_browser);
 
-        // Ánh xạ view
+        // Ánh xạ view — ĐÚNG KIỂU
         urlBar = findViewById(R.id.url_bar);
         webView = findViewById(R.id.webview);
         btnBack = findViewById(R.id.btn_back);
         btnGo = findViewById(R.id.btn_go);
+
+        // ✅ Kiểm tra null — phòng crash
+        if (urlBar == null || webView == null || btnBack == null || btnGo == null) {
+            throw new RuntimeException("Thiếu view trong layout!");
+        }
 
         // Cấu hình WebView
         webView.getSettings().setJavaScriptEnabled(true);
@@ -36,7 +41,6 @@ public class BrowserActivity extends AbstractWalletActivity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                // ✅ Đã sửa: Uri → String
                 view.loadUrl(request.getUrl().toString());
                 return true;
             }
@@ -70,7 +74,7 @@ public class BrowserActivity extends AbstractWalletActivity {
 
     @Override
     public void onBackPressed() {
-        if (webView.canGoBack()) webView.goBack();
+        if (webView != null && webView.canGoBack()) webView.goBack();
         else super.onBackPressed();
     }
 }
