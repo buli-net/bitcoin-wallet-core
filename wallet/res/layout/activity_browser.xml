@@ -60,10 +60,11 @@
     </LinearLayout>
 
     <!-- Nội dung web -->
-    <WebView
-        android:id="@+id/webview"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
+<FrameLayout
+    android:id="@+id/webview_container"
+    android:layout_width="match_parent"
+    android:layout_height="0dp"
+    android:layout_weight="1" />
+
 
 </LinearLayout>
