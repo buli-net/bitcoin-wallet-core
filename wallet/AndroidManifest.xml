@@ -222,6 +222,7 @@
             android:windowSoftInputMode="adjustResize" />
         
   <!-- Web Browser Activity 2/2-->
+
 <activity
     android:name="wallet.ui.BrowserActivity"
     android:label="@string/menu_web_browser"
@@ -229,7 +230,8 @@
     android:exported="false"
     android:windowSoftInputMode="adjustResize"
     android:configChanges="orientation|screenSize|keyboardHidden"
-    android:launchMode="singleInstance" />
+    android:launchMode="singleInstance"
+    android:hardwareAccelerated="true" /> 
 
 <service
     android:name=".ui.BrowserBackgroundService"
