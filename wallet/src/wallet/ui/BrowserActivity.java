@@ -2,149 +2,79 @@ package wallet.ui;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Bundle;
-import android.view.MenuItem;
 import android.view.View;
 import android.webkit.WebResourceRequest;
-import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.EditText;
+import androidx.appcompat.app.AppCompatActivity;
 import wallet.R;
 
-public class BrowserActivity extends Activity {
+public class BrowserActivity extends AppCompatActivity {
 
+    private EditText urlBar;
     private WebView webView;
-    private View customView;
-    private android.webkit.WebChromeClient.CustomViewCallback customViewCallback;
+    private Button btnBack;
+    private Button btnGo;
+    // ❌ Không có btnForward trong layout → xóa hoặc khai báo sau
+    // private Button btnForward;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_browser);
 
-        // Enable ActionBar back button
-        if (getActionBar() != null) {
-            getActionBar().setDisplayHomeAsUpEnabled(true);
-            getActionBar().setTitle(R.string.menu_web_browser);
-        }
-
-        // Initialize views
+        // Ánh xạ view — KHỚP với layout activity_browser.xml
+        urlBar = findViewById(R.id.url_bar);
         webView = findViewById(R.id.webview);
-        final EditText urlBar = findViewById(R.id.url_bar);
-        final Button btnBack = findViewById(R.id.btn_back);
-        final Button btnForward = findViewById(R.id.btn_forward);
-        final Button btnGo = findViewById(R.id.btn_go);
+        btnBack = findViewById(R.id.btn_back);
+        btnGo = findViewById(R.id.btn_go);
+        // btnForward = findViewById(R.id.btn_forward); // ❌ Layout chưa có → comment/xóa
 
-        // Configure WebView for full web support including YouTube
-        final WebSettings settings = webView.getSettings();
-        settings.setJavaScriptEnabled(true);                 // Required for YouTube & modern sites
-        settings.setDomStorageEnabled(true);                 // Enable local storage
-        settings.setLoadWithOverviewMode(true);              // Fit content to screen
-        settings.setUseWideViewPort(true);                   // Support wide viewport
-        settings.setBuiltInZoomControls(true);               // Allow pinch zoom
-        settings.setDisplayZoomControls(false);              // Hide zoom buttons
-        settings.setMediaPlaybackRequiresUserGesture(false); // Allow auto-play videos
-
-        // Handle page loading within WebView (do NOT open external browser)
+        // Cấu hình WebView
+        webView.getSettings().setJavaScriptEnabled(true);
+        webView.getSettings().setDomStorageEnabled(true);
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                view.loadUrl(request.getUrl());
+                // ✅ SỬA LỖI 2: Uri → String
+                view.loadUrl(request.getUrl().toString());
                 return true;
             }
-
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                super.onPageFinished(view, url);
-                urlBar.setText(url); // Update URL bar when page loads
-            }
-
-            @Override
-            public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                super.onPageStarted(view, url, favicon);
-                urlBar.setText(url);
-            }
         });
 
-        // Enable full HTML5 video support including YouTube fullscreen
-        webView.setWebChromeClient(new android.webkit.WebChromeClient() {
-            @Override
-            public void onShowCustomView(View view, CustomViewCallback callback) {
-                super.onShowCustomView(view, callback);
-                customView = view;
-                customViewCallback = callback;
-                setContentView(view);
-            }
-
-            @Override
-            public void onHideCustomView() {
-                super.onHideCustomView();
-                if (customView != null) {
-                    setContentView(R.layout.activity_browser);
-                    customView = null;
-                    customViewCallback.onCustomViewHidden();
-                }
-            }
-        });
-
-        // Load URL if opened from external intent
-        final Intent intent = getIntent();
-        if (intent.getData() != null) {
-            final String url = intent.getData().toString();
-            urlBar.setText(url);
-            webView.loadUrl(url);
-        }
-
-        // Navigate back in web history
+        // Nút Quay lại
         btnBack.setOnClickListener(v -> {
             if (webView.canGoBack()) webView.goBack();
+            else finish();
         });
 
-        // Navigate forward in web history
-        btnForward.setOnClickListener(v -> {
-            if (webView.canGoForward()) webView.goForward();
-        });
-
-        // Load URL from address bar
+        // Nút Đi
         btnGo.setOnClickListener(v -> {
             String url = urlBar.getText().toString().trim();
             if (!url.isEmpty()) {
-                // Auto prepend https:// if missing
                 if (!url.startsWith("http://") && !url.startsWith("https://")) {
                     url = "https://" + url;
                 }
                 webView.loadUrl(url);
             }
         });
-    }
 
-    // Handle ActionBar back button → close browser, return to wallet
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        if (item.getItemId() == android.R.id.home) {
-            finish(); // Close browser and go back
-            return true;
+        // Tải URL từ intent (nếu có)
+        Intent intent = getIntent();
+        if (intent.getData() != null) {
+            String url = intent.getData().toString();
+            urlBar.setText(url);
+            webView.loadUrl(url);
         }
-        return super.onOptionsItemSelected(item);
     }
 
-    // Handle system back button press
     @Override
     public void onBackPressed() {
-        // Exit fullscreen video first if active
-        if (customView != null) {
-            customViewCallback.onCustomViewHidden();
-            customView = null;
-            return;
-        }
-        // Go back in web history if possible
-        if (webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
-        }
+        if (webView.canGoBack()) webView.goBack();
+        else super.onBackPressed();
     }
 }
