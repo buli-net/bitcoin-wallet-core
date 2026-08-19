@@ -349,7 +349,6 @@ else if (itemId == R.id.menu_web_browser) {
      final Intent intent = new Intent(this, BrowserActivity.class);
      startActivity(intent);
      return true;
- }
 // end Launch the browser activity
                 
                 } else if (itemId == R.id.wallet_options_help) {
