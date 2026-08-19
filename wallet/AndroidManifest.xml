@@ -218,13 +218,16 @@
             android:theme="@style/My.Theme"
             android:windowSoftInputMode="adjustResize" />
                 <!-- Web Browser Activity -->
-<!-- ✅ Trình duyệt — khớp hoàn toàn chuẩn của dự án -->
 <activity
     android:name="wallet.ui.BrowserActivity"
     android:label="@string/menu_web_browser"
+    android:theme="@style/My.Preference"
     android:exported="false"
     android:parentActivityName="wallet.ui.WalletActivity"
-    android:theme="@style/My.Preference" />
+    android:windowSoftInputMode="adjustResize"
+    <!-- ✅ Thêm dòng này → không reset khi xoay màn hình -->
+    android:configChanges="orientation|screenSize|keyboardHidden" />
+<!-- end -->
 
 
         <provider
