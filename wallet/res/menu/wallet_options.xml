@@ -91,6 +91,20 @@
         android:id="@+id/wallet_options_donate"
         android:showAsAction="never"
         android:title="@string/wallet_options_donate" />
+    <!-- ============================================== -->
+    <!-- NEW: Utilities Submenu -->
+    <!-- ============================================== -->
+    <item
+        android:id="@+id/menu_utilities"
+        android:title="@string/menu_utilities">
+        <menu>
+            <!-- Web Browser inside Utilities -->
+            <item
+                android:id="@+id/menu_web_browser"
+                android:title="@string/menu_web_browser" />
+        </menu>
+    </item>
+<!-- END-NEW: Utilities Submenu -->
     <item
         android:id="@+id/wallet_options_help"
         android:orderInCategory="999"
