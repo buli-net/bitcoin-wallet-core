@@ -10,7 +10,10 @@
     <uses-sdk
         android:minSdkVersion="28"
         android:targetSdkVersion="34" />
-    
+
+
+<!-- trình duyệt 1/2 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <!-- normal permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -218,20 +221,25 @@
             android:theme="@style/My.Theme"
             android:windowSoftInputMode="adjustResize" />
         
-  <!-- Web Browser Activity -->
+  <!-- Web Browser Activity 2/2-->
 
-<activity
-    android:name="wallet.ui.BrowserActivity"
-    android:label="@string/menu_web_browser"
-    android:theme="@style/My.Preference"
-    android:exported="false"
-    android:parentActivityName="wallet.ui.WalletActivity"
-    android:windowSoftInputMode="adjustResize"
-    android:configChanges="orientation|screenSize|keyboardHidden"
-    android:launchMode="singleTask"
-    android:alwaysRetainTaskState="true" />
+    <activity
+        android:name="wallet.ui.BrowserActivity"
+        android:label="@string/menu_web_browser"
+        android:theme="@style/My.Preference"
+        android:exported="false"
+        android:parentActivityName="wallet.ui.WalletActivity"
+        android:windowSoftInputMode="adjustResize"
+        android:configChanges="orientation|screenSize|keyboardHidden"
+        android:launchMode="singleInstance"  
+        android:alwaysRetainTaskState="true"
+        android:process=":browser_process" />
 
-
+    <!-- Service phát nền Android 16 -->
+    <service
+        android:name=".ui.BrowserBackgroundService"
+        android:foregroundServiceType="mediaPlayback"
+        android:exported="false" />
 <!-- end -->
 
         <provider
