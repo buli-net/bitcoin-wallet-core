@@ -29,7 +29,6 @@ public class BrowserActivity extends AbstractWalletActivity {
     private ImageView btnGo;
     private FrameLayout rootLayout;
     
-    // Lưu trạng thái toàn cục — không bao giờ mất
     private static WebView staticWebView = null;
     private static String lastUrl = null;
 
@@ -55,7 +54,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         btnForwardWeb = findViewById(R.id.btn_forward_web);
         btnGo = findViewById(R.id.btn_go);
 
-        // NẾU ĐÃ CÓ WEBVIEW CŨ — GẮN LẠI, KHÔNG TẠO MỚI
+        // Nếu đã có WebView cũ — gắn lại
         if (staticWebView != null) {
             FrameLayout container = findViewById(R.id.webview_container);
             if (staticWebView.getParent() != null) {
@@ -69,7 +68,7 @@ public class BrowserActivity extends AbstractWalletActivity {
             return;
         }
 
-        // CHỈ CHẠY LẦN ĐẦU TIÊN
+        // Tạo lần đầu
         webView = new WebView(getApplicationContext());
         webView.setLayoutParams(new FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
@@ -90,7 +89,8 @@ public class BrowserActivity extends AbstractWalletActivity {
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
         webView.setKeepScreenOn(true);
         webView.setFocusable(true);
-        webView.setBackgroundColor(0); // Trong suốt — lấy màu nền theme
+        webView.setBackgroundColor(0);
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null); // ✅ Tăng tốc media
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -167,18 +167,18 @@ public class BrowserActivity extends AbstractWalletActivity {
         });
     }
 
-    // ✅ QUAN TRỌNG: CHỐNG ANDROID 16 TẠM DỪNG — KHÔNG CẦN THƯ VIỆN NGOÀI
+    // ✅ FIX PHÁT NỀN ANDROID 16
     @Override
     protected void onPause() {
         super.onPause();
-        // ❌ KHÔNG BAO GIỜ GỌI webView.onPause()
+        // ❌ KHÔNG GỌI webView.onPause()
         
-        // ✅ TRICK THEN CHỐT: Gọi onResume() NGAY TRONG onPause()
-        // → Chống hệ thống tự động tạm dừng WebView/media
+        // 3 TRICK THEN CHỐT
         webView.onResume();
         webView.resumeTimers();
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         
-        // ✅ Bắt Foreground Service — Android 16 bắt buộc
+        // Bắt Foreground Service
         serviceIntent = new Intent(this, BrowserBackgroundService.class);
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             startForegroundService(serviceIntent);
@@ -192,8 +192,6 @@ public class BrowserActivity extends AbstractWalletActivity {
         super.onResume();
         webView.onResume();
         webView.resumeTimers();
-        
-        // Dừng Service khi quay lại
         if (serviceIntent != null) {
             stopService(serviceIntent);
             serviceIntent = null;
@@ -201,7 +199,6 @@ public class BrowserActivity extends AbstractWalletActivity {
         if (lastUrl != null) urlBar.setText(lastUrl);
     }
 
-    // ✅ NÚT BACK — KHÔNG ĐÓNG ACTIVITY, CHỈ QUAY VỀ VÍ
     @Override
     public void onBackPressed() {
         if (customView != null && customViewCallback != null) {
@@ -217,7 +214,6 @@ public class BrowserActivity extends AbstractWalletActivity {
         startActivity(walletIntent);
     }
 
-    // ✅ NÚT HOME TRÊN ACTION BAR
     @Override
     public boolean onOptionsItemSelected(android.view.MenuItem item) {
         if (item.getItemId() == android.R.id.home) {
@@ -233,7 +229,6 @@ public class BrowserActivity extends AbstractWalletActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    // ✅ CHỈ HỦY KHI ĐÓNG APP TỪ RECENTS
     @Override
     protected void onDestroy() {
         if (isFinishing() && staticWebView != null) {
