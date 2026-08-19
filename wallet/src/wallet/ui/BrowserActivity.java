@@ -6,7 +6,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.FrameLayout;
-import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.WebResourceRequest;
@@ -16,7 +15,6 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.TextView;
 import wallet.R;
 
 import java.net.URI;
@@ -29,7 +27,7 @@ public class BrowserActivity extends AbstractWalletActivity {
     private ImageView btnBackWeb;
     private ImageView btnForwardWeb;
     private ImageView btnGo;
-    private View rootLayout; // ✅ Lưu layout gốc
+    private FrameLayout rootLayout;
 
     // Hỗ trợ Fullscreen video
     private View customView;
@@ -41,7 +39,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_browser);
 
-        rootLayout = findViewById(android.R.id.content); // ✅ Lưu view gốc
+        rootLayout = (FrameLayout) findViewById(android.R.id.content);
 
         if (getActionBar() != null) {
             getActionBar().setDisplayHomeAsUpEnabled(true);
@@ -54,14 +52,19 @@ public class BrowserActivity extends AbstractWalletActivity {
         btnForwardWeb = findViewById(R.id.btn_forward_web);
         btnGo = findViewById(R.id.btn_go);
 
-        // Cấu hình WebView
-        WebSettings webSettings = webView.getSettings(); // ✅ Dùng biến để dễ quản lý
+        // ✅ CẤU HÌNH PHÁT NỀN — ĐÃ THÊM
+        WebSettings webSettings = webView.getSettings();
         webSettings.setJavaScriptEnabled(true);
         webSettings.setDomStorageEnabled(true);
-        webSettings.setCacheMode(WebSettings.LOAD_DEFAULT); // ✅ Đã sửa
+        webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
         webSettings.setAllowFileAccess(true);
         webSettings.setAllowContentAccess(true);
-        webSettings.setMediaPlaybackRequiresUserGesture(false);
+        webSettings.setMediaPlaybackRequiresUserGesture(false); // ✅ Phát tự động
+        webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
+
+        // Giữ WebView chạy khi ẩn
+        webView.setKeepScreenOn(false); // Có thể tắt màn hình vẫn phát
+        webView.setFocusable(true);
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -73,7 +76,7 @@ public class BrowserActivity extends AbstractWalletActivity {
             }
         });
 
-        // ✅ WebChromeClient — Hỗ trợ fullscreen KHÔNG reset
+        // ✅ WebChromeClient — Fullscreen KHÔNG reset
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onShowCustomView(View view, CustomViewCallback callback) {
@@ -83,11 +86,8 @@ public class BrowserActivity extends AbstractWalletActivity {
                 }
                 customView = view;
                 customViewCallback = callback;
-
-                // Lưu trạng thái ban đầu
                 originalSystemUiVisibility = getWindow().getDecorView().getSystemUiVisibility();
 
-                // Ẩn ActionBar → toàn màn hình
                 if (getActionBar() != null) getActionBar().hide();
                 getWindow().getDecorView().setSystemUiVisibility(
                     View.SYSTEM_UI_FLAG_FULLSCREEN |
@@ -95,27 +95,20 @@ public class BrowserActivity extends AbstractWalletActivity {
                     View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                 );
 
-                // ✅ THÊM VÀO → KHÔNG thay thế layout → KHÔNG reset WebView
-                ((FrameLayout) rootLayout).addView(view);
+                rootLayout.addView(view);
             }
 
             @Override
             public void onHideCustomView() {
                 if (customView == null) return;
-
-                // ✅ XÓA view fullscreen → KHÔNG tạo lại layout gốc
-                ((FrameLayout) rootLayout).removeView(customView);
+                rootLayout.removeView(customView);
                 customView = null;
 
-                // Khôi phục ActionBar & thanh trạng thái
                 if (getActionBar() != null) getActionBar().show();
                 getWindow().getDecorView().setSystemUiVisibility(originalSystemUiVisibility);
 
                 customViewCallback.onCustomViewHidden();
                 customViewCallback = null;
-
-                // ✅ KHÔNG gọi setContentView → WebView không bị reset!
-                // KHÔNG cần rebindViews() vì view gốc vẫn nguyên
             }
         });
 
@@ -156,6 +149,24 @@ public class BrowserActivity extends AbstractWalletActivity {
                 webView.loadUrl(url);
             }
         }
+    }
+
+    // ✅ QUAN TRỌNG — RA NỀN KHÔNG DỪNG VIDEO
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // ❌ KHÔNG gọi webView.onPause() — nó sẽ dừng media
+        // webView.onPause(); // BỎ DÒNG NÀY
+        // ❌ KHÔNG gọi pauseTimers — dừng player
+        // webView.pauseTimers(); // BỎ DÒNG NÀY
+    }
+
+    // ✅ QUAY LẠI — TIẾP TỤC BÌNH THƯỜNG
+    @Override
+    protected void onResume() {
+        super.onResume();
+        webView.onResume();
+        // webView.resumeTimers(); // Không cần nếu không gọi pause
     }
 
     // Lưu trạng thái
@@ -222,5 +233,15 @@ public class BrowserActivity extends AbstractWalletActivity {
         } else {
             super.onBackPressed();
         }
+    }
+
+    // ✅ DỌN DẸP KHI ĐÓNG HẲN — chỉ dừng khi thực sự đóng
+    @Override
+    protected void onDestroy() {
+        if (webView != null) {
+            webView.stopLoading();
+            webView.destroy();
+        }
+        super.onDestroy();
     }
 }
