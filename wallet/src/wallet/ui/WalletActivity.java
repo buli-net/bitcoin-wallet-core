@@ -341,14 +341,16 @@ public final class WalletActivity extends AbstractWalletActivity {
                     handleDonate();
                     return true;
             //end donate 2/3
-// ==============================================
+// ==================================================
 // NEW: Open Web Browser
-// ==============================================
-else if (itemId == R.id.menu_web_browser) {
-     // Launch the browser activity
-     final Intent intent = new Intent(this, BrowserActivity.class);
-     startActivity(intent);
-     return true;
+// ==================================================
+if (itemId == R.id.menu_web_browser) { 
+    // Launch the browser activity
+    final Intent intent = new Intent(this, BrowserActivity.class);
+    startActivity(intent);
+    return true;
+}
+
 // end Launch the browser activity
                 
                 } else if (itemId == R.id.wallet_options_help) {
