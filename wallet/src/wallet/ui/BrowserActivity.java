@@ -34,7 +34,7 @@ public class BrowserActivity extends AbstractWalletActivity {
     private ImageView btnGo;
     private FrameLayout rootLayout;
     private FrameLayout webViewContainer;
-    private LinearLayout toolbarContainer; // ✅ Thanh công cụ
+    private LinearLayout toolbarContainer;
     
     private static WebView staticWebView = null;
     private static String lastUrl = null;
@@ -53,7 +53,7 @@ public class BrowserActivity extends AbstractWalletActivity {
 
         rootLayout = (FrameLayout) findViewById(android.R.id.content);
         webViewContainer = findViewById(R.id.webview_container);
-        toolbarContainer = findViewById(R.id.toolbar_container); // ✅ Ánh xạ thanh công cụ
+        toolbarContainer = findViewById(R.id.toolbar_container);
         audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
         if (getActionBar() != null) {
@@ -66,10 +66,8 @@ public class BrowserActivity extends AbstractWalletActivity {
         btnForwardWeb = findViewById(R.id.btn_forward_web);
         btnGo = findViewById(R.id.btn_go);
 
-        // ✅ Cập nhật màu theme lần đầu
         updateThemeColors();
 
-        // Nếu đã có WebView cũ — gắn lại
         if (staticWebView != null) {
             if (staticWebView.getParent() != null) {
                 ((FrameLayout) staticWebView.getParent()).removeView(staticWebView);
@@ -82,7 +80,6 @@ public class BrowserActivity extends AbstractWalletActivity {
             return;
         }
 
-        // Tạo lần đầu
         webView = new WebView(getApplicationContext());
         webView.setLayoutParams(new FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
@@ -134,28 +131,22 @@ public class BrowserActivity extends AbstractWalletActivity {
         }
     }
 
-    // ✅ FIX 1: CẬP NHẬT CẢ THANH CÔNG CỤ + NỀN THEO THEME
+    // ✅ ĐÃ FIX LỖI BIÊN DỊCH — CHỈ DÙNG android.R.attr
     private void updateThemeColors() {
-        // Lấy màu nền cửa sổ từ theme
         int[] windowAttrs = { android.R.attr.windowBackground };
         android.content.res.TypedArray ta = obtainStyledAttributes(windowAttrs);
         int bgColor = ta.getColor(0, 0xFFFFFFFF);
         ta.recycle();
         
-        // Lấy màu action bar từ theme
-        int[] actionBarAttrs = { android.R.attr.colorPrimary, R.attr.colorPrimary };
+        int[] actionBarAttrs = { android.R.attr.colorPrimary };
         ta = obtainStyledAttributes(actionBarAttrs);
-        int toolbarColor = ta.getColor(0, ta.getColor(1, 0xFF212121));
+        int toolbarColor = ta.getColor(0, 0xFF212121);
         ta.recycle();
         
-        // ✅ Cập nhật nền WebView
         if (webViewContainer != null) webViewContainer.setBackgroundColor(bgColor);
         if (webView != null) webView.setBackgroundColor(bgColor);
-        
-        // ✅ Cập nhật thanh công cụ — đổi màu NGAY
         if (toolbarContainer != null) toolbarContainer.setBackgroundColor(toolbarColor);
         
-        // ✅ Cập nhật ActionBar trên cùng
         if (getActionBar() != null) {
             getActionBar().setBackgroundDrawable(new ColorDrawable(toolbarColor));
         }
@@ -164,7 +155,7 @@ public class BrowserActivity extends AbstractWalletActivity {
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        updateThemeColors(); // Đổi màu NGAY khi đổi theme
+        updateThemeColors();
     }
 
     private void setupWebChromeClient() {
@@ -214,28 +205,22 @@ public class BrowserActivity extends AbstractWalletActivity {
         });
     }
 
-    // ✅ FIX 2: PHÁT NỀN ANDROID 16 — GIỮ FOCUS + KÍCH HOẠT RENDER
     @Override
     protected void onPause() {
         super.onPause();
-        // ❌ KHÔNG GỌI webView.onPause()
-        
-        // 5 TRICK THEN CHỐT CHO ANDROID 16
         webView.onResume();
         webView.resumeTimers();
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-        webView.requestFocus(); // ✅ GIỮ FOCUS — hệ thống không tắt
-        webView.setWillNotDraw(false); // ✅ TIẾP TỤC RENDER
+        webView.requestFocus();
+        webView.setWillNotDraw(false);
         
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         
-        // ✅ Yêu cầu Audio Focus
         afChangeListener = focusChange -> {};
         audioManager.requestAudioFocus(afChangeListener,
             AudioManager.STREAM_MUSIC,
             AudioManager.AUDIOFOCUS_GAIN);
         
-        // ✅ Bắt Foreground Service
         serviceIntent = new Intent(this, BrowserBackgroundService.class);
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             startForegroundService(serviceIntent);
@@ -250,7 +235,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         webView.onResume();
         webView.resumeTimers();
         webView.requestFocus();
-        updateThemeColors(); // Cập nhật màu khi quay lại
+        updateThemeColors();
         
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         if (afChangeListener != null) {
