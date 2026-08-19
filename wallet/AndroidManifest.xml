@@ -218,12 +218,14 @@
             android:theme="@style/My.Theme"
             android:windowSoftInputMode="adjustResize" />
                 <!-- Web Browser Activity -->
-        <activity
-            android:name=".ui.BrowserActivity"
-            android:label="@string/menu_web_browser"
-            android:theme="@style/My.Preference"
-            android:exported="false"
-            android:windowSoftInputMode="adjustResize" />
+<!-- ✅ Trình duyệt — khớp hoàn toàn chuẩn của dự án -->
+<activity
+    android:name="wallet.ui.BrowserActivity"
+    android:label="@string/menu_web_browser"
+    android:exported="false"
+    android:parentActivityName="wallet.ui.WalletActivity"
+    android:theme="@style/My.Preference" />
+
 
         <provider
             android:name="androidx.core.content.FileProvider"
