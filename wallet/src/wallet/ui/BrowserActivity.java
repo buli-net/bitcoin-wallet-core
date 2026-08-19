@@ -72,7 +72,6 @@ public class BrowserActivity extends AbstractWalletActivity {
 
         // === CHỈ CHẠY LẦN ĐẦU TIÊN ===
         webView = new WebView(getApplicationContext()); // ✅ Dùng Application context → không bị hủy
-        webView.setId(R.id.webview);
         webView.setLayoutParams(new FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
             FrameLayout.LayoutParams.MATCH_PARENT
