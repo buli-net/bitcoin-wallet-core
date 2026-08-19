@@ -6,7 +6,6 @@
     android:orientation="vertical"
     android:background="?android:attr/windowBackground">
 
-    <!-- Thanh công cụ trên cùng -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -15,7 +14,6 @@
         android:gravity="center_vertical"
         android:background="@color/bg_action_bar">
 
-        <!-- ✅ 1. Nút BACK ← -->
         <ImageView
             android:id="@+id/btn_back_web"
             android:layout_width="40dp"
@@ -24,7 +22,6 @@
             android:tint="@color/fg_on_dark_bg_network_significant"
             android:background="?android:attr/selectableItemBackground" />
 
-        <!-- ✅ 2. Nút FORWARD → — KỀ BÊN NÚT BACK -->
         <ImageView
             android:id="@+id/btn_forward_web"
             android:layout_width="40dp"
@@ -33,7 +30,6 @@
             android:tint="@color/fg_on_dark_bg_network_significant"
             android:background="?android:attr/selectableItemBackground" />
 
-        <!-- ✅ 3. Ô URL -->
         <EditText
             android:id="@+id/url_bar"
             android:layout_width="0dp"
@@ -49,7 +45,6 @@
             android:inputType="textUri"
             android:imeOptions="actionGo" />
 
-        <!-- ✅ 4. Nút GO → -->
         <ImageView
             android:id="@+id/btn_go"
             android:layout_width="40dp"
@@ -59,13 +54,12 @@
             android:background="?android:attr/selectableItemBackground" />
     </LinearLayout>
 
-    <!-- Nội dung web -->
-
-<FrameLayout
-    android:id="@+id/webview_container"
-    android:layout_width="match_parent"
-    android:layout_height="0dp"
-    android:layout_weight="1"
-    android:background="?android:attr/windowBackground" />  <!-- ✅ Thêm dòng này -->
+    <!-- ✅ Container có nền theo theme -->
+    <FrameLayout
+        android:id="@+id/webview_container"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="?android:attr/windowBackground" />
 
 </LinearLayout>
