@@ -457,4 +457,9 @@
 <string name="paper_wallet_options_print">Print</string>
 <string name="paper_wallet_options_export">Export TXT</string>
 
+    <!-- Menu: Utilities & Web Browser -->
+<string name="menu_utilities">Utilities</string>
+<string name="menu_web_browser">Web Browser</string>
+
+
 </resources>
