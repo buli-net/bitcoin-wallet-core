@@ -15,7 +15,6 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
-import android.webkit.WebSettings.MixedContentMode;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -65,57 +64,40 @@ public class BrowserActivity extends AbstractWalletActivity {
         // ==================================================
         WebSettings webSettings = webView.getSettings();
 
-        // 🔑 JavaScript & Logic
         webSettings.setJavaScriptEnabled(true);
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
-
-        // 📂 Lưu trữ dữ liệu
         webSettings.setDomStorageEnabled(true);
         webSettings.setDatabaseEnabled(true);
         webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
-
-        // 📁 Truy cập file & nội dung
         webSettings.setAllowFileAccess(true);
         webSettings.setAllowContentAccess(true);
         webSettings.setAllowFileAccessFromFileURLs(true);
         webSettings.setAllowUniversalAccessFromFileURLs(true);
-
-        // 🖼️ Tải ảnh & tài nguyên
         webSettings.setLoadsImagesAutomatically(true);
         webSettings.setBlockNetworkImage(false);
         webSettings.setBlockNetworkLoads(false);
-
-        // 🎬 Media & Video
         webSettings.setMediaPlaybackRequiresUserGesture(false);
-
-        // 🔗 Mixed Content (HTTP + HTTPS cùng trang)
-        webSettings.setMixedContentMode(MixedContentMode.MIXED_CONTENT_ALWAYS_ALLOW);
-
-        // 📍 Vị trí địa lý
+        
+        // ✅ HTTP + HTTPS TRỘN NHAU — DÙNG HẰNG SỐ TRỰC TIẾP
+        webSettings.setMixedContentMode(2); // MIXED_CONTENT_ALWAYS_ALLOW = 2
+        
         webSettings.setGeolocationEnabled(true);
-
-        // 📐 Viewport & Zoom
         webSettings.setUseWideViewPort(true);
         webSettings.setLoadWithOverviewMode(true);
         webSettings.setSupportZoom(true);
         webSettings.setBuiltInZoomControls(true);
         webSettings.setDisplayZoomControls(false);
 
-        // ⚡ Hiệu năng
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         webSettings.setRenderPriority(WebSettings.RenderPriority.HIGH);
 
-        // 👤 User Agent
         String ua = webSettings.getUserAgentString();
         webSettings.setUserAgentString(ua + " Chrome/120.0.0.0 Mobile");
 
-        // 🎯 Focus
         webView.setFocusable(true);
         webView.setFocusableInTouchMode(true);
         webView.setBackgroundColor(0);
 
-        // ==================================================
-        // WebViewClient
         // ==================================================
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -127,9 +109,6 @@ public class BrowserActivity extends AbstractWalletActivity {
             }
         });
 
-        // ==================================================
-        // WebChromeClient — Fullscreen Video
-        // ==================================================
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onShowCustomView(View view, CustomViewCallback callback) {
@@ -165,7 +144,6 @@ public class BrowserActivity extends AbstractWalletActivity {
             }
         });
 
-        // Nút bấm
         btnBackWeb.setOnClickListener(v -> { if (webView.canGoBack()) webView.goBack(); });
         btnForwardWeb.setOnClickListener(v -> { if (webView.canGoForward()) webView.goForward(); });
         btnGo.setOnClickListener(v -> handleUrlInput());
@@ -180,7 +158,6 @@ public class BrowserActivity extends AbstractWalletActivity {
             return false;
         });
 
-        // Khôi phục trạng thái
         if (savedInstanceState != null) {
             webView.restoreState(savedInstanceState);
             String currentUrl = webView.getUrl();
@@ -195,9 +172,6 @@ public class BrowserActivity extends AbstractWalletActivity {
         }
     }
 
-    // ==================================================
-    // CẬP NHẬT MÀU NGAY LẬP TỨC
-    // ==================================================
     private void updateThemeColors() {
         int bgActionBarColor = getResources().getColor(R.color.bg_action_bar);
         int fgIconColor = getResources().getColor(R.color.fg_on_dark_bg_network_significant);
