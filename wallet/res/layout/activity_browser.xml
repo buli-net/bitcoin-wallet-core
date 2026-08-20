@@ -6,7 +6,6 @@
     android:orientation="vertical"
     android:background="?android:attr/windowBackground">
 
-    <!-- Thanh công cụ — GIỮ NGUYÊN 100% -->
     <LinearLayout
         android:id="@+id/toolbar_container"
         android:layout_width="match_parent"
@@ -16,7 +15,6 @@
         android:gravity="center_vertical"
         android:background="@color/bg_action_bar">
 
-        <!-- Nút BACK — GIỮ NGUYÊN icon + màu + background -->
         <ImageView
             android:id="@+id/btn_back_web"
             android:layout_width="40dp"
@@ -25,7 +23,6 @@
             android:tint="@color/fg_on_dark_bg_network_significant"
             android:background="?android:attr/selectableItemBackground" />
 
-        <!-- Nút FORWARD — GIỮ NGUYÊN icon + màu + background -->
         <ImageView
             android:id="@+id/btn_forward_web"
             android:layout_width="40dp"
@@ -34,7 +31,6 @@
             android:tint="@color/fg_on_dark_bg_network_significant"
             android:background="?android:attr/selectableItemBackground" />
 
-        <!-- Ô URL — GIỮ NGUYÊN background + màu chữ + kích thước -->
         <EditText
             android:id="@+id/url_bar"
             android:layout_width="0dp"
@@ -50,7 +46,6 @@
             android:inputType="textUri"
             android:imeOptions="actionGo" />
 
-        <!-- Nút GO — GIỮ NGUYÊN icon + màu + background -->
         <ImageView
             android:id="@+id/btn_go"
             android:layout_width="40dp"
@@ -60,9 +55,8 @@
             android:background="?android:attr/selectableItemBackground" />
     </LinearLayout>
 
-    <!-- Khung chứa WebView — ĐỦ ID KHỚP JAVA, KHÔNG CÓ WebView tĩnh (được gắn động từ code) -->
-    <FrameLayout
-        android:id="@+id/webview_container"
+    <WebView
+        android:id="@+id/webview"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />
