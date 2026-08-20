@@ -23,6 +23,8 @@ import wallet.R;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Arrays;
+import java.util.List;
 
 public class BrowserActivity extends AbstractWalletActivity {
 
@@ -38,10 +40,16 @@ public class BrowserActivity extends AbstractWalletActivity {
     private WebChromeClient.CustomViewCallback customViewCallback;
     private int originalSystemUiVisibility;
 
-    // ✅ Lưu trạng thái để KHÔNG BỊ RESET khi nhấn Back
     private static Bundle savedWebViewState = null;
     private static String currentUrl = null;
     private static boolean hasState = false;
+
+    // ✅ Danh sách scheme cần mở bên ngoài (TikTok, Facebook, Instagram...)
+    private static final List<String> EXTERNAL_SCHEMES = Arrays.asList(
+        "snssdk1180", "snssdk1128", "snssdk1166", // TikTok
+        "fb", "fb-messenger", "instagram", "twitter", "whatsapp",
+        "intent", "market", "tel", "mailto", "geo"
+    );
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -62,7 +70,6 @@ public class BrowserActivity extends AbstractWalletActivity {
         btnForwardWeb = findViewById(R.id.btn_forward_web);
         btnGo = findViewById(R.id.btn_go);
 
-        // ✅ Cập nhật màu ngay
         updateAllColors();
 
         // ==================================================
@@ -82,7 +89,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         webSettings.setBlockNetworkImage(false);
         webSettings.setBlockNetworkLoads(false);
         webSettings.setMediaPlaybackRequiresUserGesture(false);
-        webSettings.setMixedContentMode(2); // MIXED_CONTENT_ALWAYS_ALLOW
+        webSettings.setMixedContentMode(2);
         webSettings.setGeolocationEnabled(true);
         webSettings.setUseWideViewPort(true);
         webSettings.setLoadWithOverviewMode(true);
@@ -98,20 +105,52 @@ public class BrowserActivity extends AbstractWalletActivity {
         webView.setFocusableInTouchMode(true);
 
         // ==================================================
+        // ✅ FIX CHÍNH — XỬ LÝ SCHEME TIKTOK & URL BÊN NGOÀI
+        // ==================================================
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
+                String scheme = request.getUrl().getScheme();
+
+                // ✅ Nếu là scheme không chuẩn như snssdk1180:// → mở bằng ứng dụng
+                if (scheme != null && EXTERNAL_SCHEMES.contains(scheme.toLowerCase())) {
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                        view.getContext().startActivity(intent);
+                        urlBar.setText(url);
+                        return true; // ✅ Không load trong WebView
+                    } catch (Exception e) {
+                        // Không có ứng dụng → mở link web thay thế
+                        String webUrl = "https://www.tiktok.com";
+                        if (url.contains("aweme/detail")) {
+                            // Trích xuất ID video từ URL TikTok
+                            String path = request.getUrl().getPath();
+                            if (path != null && path.contains("/detail/")) {
+                                String videoId = path.replaceAll(".*/detail/", "").replaceAll("[^0-9].*", "");
+                                if (!videoId.isEmpty()) {
+                                    webUrl = "https://www.tiktok.com/t/ZTR" + videoId + "/";
+                                }
+                            }
+                        }
+                        view.loadUrl(webUrl);
+                        urlBar.setText(webUrl);
+                        currentUrl = webUrl;
+                        return true;
+                    }
+                }
+
+                // ✅ URL bình thường → load trong WebView
                 view.loadUrl(url);
                 urlBar.setText(url);
-                currentUrl = url; // ✅ Lưu URL hiện tại
+                currentUrl = url;
                 return true;
             }
-            
+
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                currentUrl = url; // ✅ Cập nhật URL khi tải xong
+                currentUrl = url;
                 if (urlBar != null && !urlBar.getText().toString().equals(url)) {
                     urlBar.setText(url);
                 }
@@ -149,7 +188,6 @@ public class BrowserActivity extends AbstractWalletActivity {
             }
         });
 
-        // Nút bấm
         btnBackWeb.setOnClickListener(v -> { if (webView.canGoBack()) webView.goBack(); });
         btnForwardWeb.setOnClickListener(v -> { if (webView.canGoForward()) webView.goForward(); });
         btnGo.setOnClickListener(v -> handleUrlInput());
@@ -165,24 +203,18 @@ public class BrowserActivity extends AbstractWalletActivity {
         });
 
         // ==================================================
-        // ✅ KHÔI PHỤC TRẠNG THÁI — FIX LỖI BACK RA VÀO LẠI BỊ RESET
+        // ✅ KHÔI PHỤC TRẠNG THÁI — KHÔNG BỊ RESET
         // ==================================================
         if (hasState && savedWebViewState != null) {
-            // ✅ Có trạng thái đã lưu → KHÔI PHỤC, KHÔNG loadUrl mới
             webView.restoreState(savedWebViewState);
-            if (currentUrl != null) {
-                urlBar.setText(currentUrl);
-            }
-            // Xóa trạng thái tạm — chỉ dùng 1 lần
+            if (currentUrl != null) urlBar.setText(currentUrl);
             hasState = false;
             savedWebViewState = null;
         } else if (savedInstanceState != null) {
-            // Khôi phục từ hệ thống (xoay màn hình...)
             webView.restoreState(savedInstanceState);
             String url = webView.getUrl();
             if (url != null) urlBar.setText(url);
         } else {
-            // ✅ LẦN ĐẦU MỞ — chỉ loadUrl khi có intent data
             Intent intent = getIntent();
             if (intent.getData() != null) {
                 String url = intent.getData().toString();
@@ -193,16 +225,11 @@ public class BrowserActivity extends AbstractWalletActivity {
         }
     }
 
-    // ==================================================
-    // ✅ LƯU TRẠNG THÁI TRƯỚC KHI NHẤN BACK — QUAN TRỌNG NHẤT
-    // ==================================================
     @Override
     public void onPause() {
         super.onPause();
         if (webView != null) {
             webView.onPause();
-            
-            // ✅ Lưu trạng thái VÀO BIẾN STATIC — tồn tại dù Activity bị hủy
             savedWebViewState = new Bundle();
             webView.saveState(savedWebViewState);
             hasState = true;
@@ -213,16 +240,10 @@ public class BrowserActivity extends AbstractWalletActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (webView != null) {
-            webView.onResume();
-        }
-        // ✅ Chỉ cập nhật màu — KHÔNG loadUrl
+        if (webView != null) webView.onResume();
         updateAllColors();
     }
 
-    // ==================================================
-    // ✅ NÚT BACK QUAY VỀ VÍ CHÍNH — KHÔNG XÓA TRẠNG THÁI
-    // ==================================================
     @Override
     public void onBackPressed() {
         if (customView != null && customViewCallback != null) {
@@ -232,7 +253,6 @@ public class BrowserActivity extends AbstractWalletActivity {
         if (webView.canGoBack()) {
             webView.goBack();
         } else {
-            // ✅ Đóng Activity, nhưng trạng thái ĐÃ ĐƯỢC LƯU trong onPause() → mở lại KHÔNG RESET
             super.onBackPressed();
         }
     }
@@ -243,15 +263,12 @@ public class BrowserActivity extends AbstractWalletActivity {
             if (customView != null && customViewCallback != null) {
                 customViewCallback.onCustomViewHidden();
             }
-            // ✅ Nhấn nút Home trên ActionBar → cũng lưu trạng thái rồi đóng
             finish();
             return true;
         }
         return super.onOptionsItemSelected(item);
     }
 
-    // ==================================================
-    // ✅ CẬP NHẬT MÀU — ĐỔI NGAY, KHÔNG ĐỤNG WEBVIEW
     // ==================================================
     private void updateAllColors() {
         int bgActionBarColor = getResources().getColor(R.color.bg_action_bar);
@@ -289,7 +306,7 @@ public class BrowserActivity extends AbstractWalletActivity {
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        updateAllColors(); // ✅ Đổi theme → đổi màu ngay, KHÔNG reset trang
+        updateAllColors();
     }
 
     private void handleUrlInput() {
@@ -326,9 +343,7 @@ public class BrowserActivity extends AbstractWalletActivity {
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        if (webView != null) {
-            webView.saveState(outState);
-        }
+        if (webView != null) webView.saveState(outState);
     }
 
     @Override
