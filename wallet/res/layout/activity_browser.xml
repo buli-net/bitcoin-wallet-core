@@ -21,7 +21,7 @@
             android:layout_height="40dp"
             android:src="@drawable/ic_back_white_24dp"
             android:tint="?attr/textColorPrimaryInverse"
-            android:background="?attr/selectableItemBackgroundBorderless" />
+            android:background="?attr/selectableItemBackground" />
 
         <ImageView
             android:id="@+id/btn_forward_web"
@@ -29,7 +29,7 @@
             android:layout_height="40dp"
             android:src="@drawable/ic_forward_white_24dp"
             android:tint="?attr/textColorPrimaryInverse"
-            android:background="?attr/selectableItemBackgroundBorderless" />
+            android:background="?attr/selectableItemBackground" />
 
         <EditText
             android:id="@+id/url_bar"
@@ -53,7 +53,7 @@
             android:layout_height="40dp"
             android:src="@drawable/ic_go_white_24dp"
             android:tint="?attr/textColorPrimaryInverse"
-            android:background="?attr/selectableItemBackgroundBorderless" />
+            android:background="?attr/selectableItemBackground" />
     </LinearLayout>
 
     <FrameLayout
