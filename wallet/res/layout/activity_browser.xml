@@ -6,7 +6,7 @@
     android:orientation="vertical"
     android:background="?android:attr/windowBackground">
 
-    <!-- Thanh công cụ — PHẢI CÓ ID: toolbar_container -->
+    <!-- Thanh công cụ trên cùng — ĐÃ THÊM ID toolbar_container -->
     <LinearLayout
         android:id="@+id/toolbar_container"
         android:layout_width="match_parent"
@@ -14,26 +14,27 @@
         android:orientation="horizontal"
         android:padding="8dp"
         android:gravity="center_vertical"
-        android:background="?android:attr/colorPrimary">
+        android:background="@color/bg_action_bar">
 
-        <!-- Nút Back -->
+        <!-- ✅ Nút BACK ← — Giữ nguyên màu như mẫu -->
         <ImageView
             android:id="@+id/btn_back_web"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:src="@drawable/ic_back_white_24dp"
+            android:tint="@color/fg_on_dark_bg_network_significant"
             android:background="?android:attr/selectableItemBackground" />
 
-        <!-- Nút Forward -->
+        <!-- ✅ Nút FORWARD → — Giữ nguyên màu như mẫu -->
         <ImageView
             android:id="@+id/btn_forward_web"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:src="@drawable/ic_forward_white_24dp"
-            android:layout_marginStart="4dp"
+            android:tint="@color/fg_on_dark_bg_network_significant"
             android:background="?android:attr/selectableItemBackground" />
 
-        <!-- Ô URL -->
+        <!-- ✅ Ô URL — Giữ nguyên màu như mẫu -->
         <EditText
             android:id="@+id/url_bar"
             android:layout_width="0dp"
@@ -44,28 +45,32 @@
             android:hint="URL..."
             android:background="@drawable/edittext_background"
             android:textColor="?android:attr/textColorPrimary"
-            android:textColorHint="?android:attr/textColorHint"
             android:textSize="14sp"
-            android:padding="10dp"
+            android:padding="8dp"
             android:inputType="textUri"
             android:imeOptions="actionGo" />
 
-        <!-- Nút Go -->
+        <!-- ✅ Nút GO → — Giữ nguyên màu như mẫu -->
         <ImageView
             android:id="@+id/btn_go"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:src="@drawable/ic_go_white_24dp"
-            android:layout_marginStart="4dp"
+            android:tint="@color/fg_on_dark_bg_network_significant"
             android:background="?android:attr/selectableItemBackground" />
     </LinearLayout>
 
-    <!-- Khu vực WebView — PHẢI CÓ ID: webview_container -->
+    <!-- Nội dung web — ĐỔI ID thành webview_container để khớp Java -->
     <FrameLayout
         android:id="@+id/webview_container"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:background="?android:attr/windowBackground" />
+        android:layout_weight="1">
+
+        <WebView
+            android:id="@+id/webview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </FrameLayout>
 
 </LinearLayout>
