@@ -149,7 +149,10 @@
     <item name="android:checkboxStyle">@style/My.Widget.CompoundButton.CheckBox</item>
     <item name="android:spinnerStyle">@style/My.Widget.Spinner</item>
     <item name="android:popupMenuStyle">@style/My.Widget.PopupMenu</item>
-      
+
+    <item name="android:actionBarTitleStyle">@style/ActionBar.Title.AutoWrap</item>
+    <item name="actionBarTitleStyle">@style/ActionBar.Title.AutoWrap</item>
+
 </style>
 
     
@@ -169,8 +172,14 @@
     <item name="android:textColor">@color/fg_on_dark_bg_network_significant</item>
     <item name="android:textStyle">bold</item>
     <item name="android:fontFamily">sans-serif-medium</item>
-    
  </style> 
+
     
+    <style name="ActionBar.Title.AutoWrap" parent="TextAppearance.AppCompat.Widget.ActionBar.Title">
+    <item name="android:maxLines">2</item>
+    <item name="android:singleLine">false</item>
+    <item name="android:ellipsize">end</item>
+</style>
+
 <!-- end fix theme setting -->
 </resources>
