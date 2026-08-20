@@ -151,7 +151,7 @@
     <item name="android:popupMenuStyle">@style/My.Widget.PopupMenu</item>
 
     <item name="android:actionBarTitleStyle">@style/ActionBar.Title.AutoWrap</item>
-    <item name="actionBarTitleStyle">@style/ActionBar.Title.AutoWrap</item>
+
 
 </style>
 
@@ -175,11 +175,12 @@
  </style> 
 
     
-    <style name="ActionBar.Title.AutoWrap" parent="TextAppearance.AppCompat.Widget.ActionBar.Title">
+    <style name="ActionBar.Title.AutoWrap" parent="android:TextAppearance.Widget.ActionBar.Title">
     <item name="android:maxLines">2</item>
     <item name="android:singleLine">false</item>
     <item name="android:ellipsize">end</item>
 </style>
+
 
 <!-- end fix theme setting -->
 </resources>
