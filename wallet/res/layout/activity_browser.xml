@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -6,6 +7,7 @@
     android:orientation="vertical"
     android:background="?android:attr/windowBackground">
 
+    <!-- Toolbar container -->
     <LinearLayout
         android:id="@+id/toolbar_container"
         android:layout_width="match_parent"
@@ -13,24 +15,27 @@
         android:orientation="horizontal"
         android:padding="8dp"
         android:gravity="center_vertical"
-        android:background="?attr/colorPrimary">
+        android:background="?android:attr/colorPrimary">
 
+        <!-- Back button -->
         <ImageView
             android:id="@+id/btn_back_web"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:src="@drawable/ic_back_white_24dp"
-            android:tint="?attr/textColorPrimaryInverse"
-            android:background="?attr/selectableItemBackground" />
+            android:tint="?android:attr/textColorPrimaryInverse"
+            android:background="?android:attr/selectableItemBackground" />
 
+        <!-- Forward button -->
         <ImageView
             android:id="@+id/btn_forward_web"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:src="@drawable/ic_forward_white_24dp"
-            android:tint="?attr/textColorPrimaryInverse"
-            android:background="?attr/selectableItemBackground" />
+            android:tint="?android:attr/textColorPrimaryInverse"
+            android:background="?android:attr/selectableItemBackground" />
 
+        <!-- URL Bar -->
         <EditText
             android:id="@+id/url_bar"
             android:layout_width="0dp"
@@ -40,22 +45,24 @@
             android:layout_marginEnd="8dp"
             android:hint="URL..."
             android:background="@drawable/edittext_background"
-            android:textColor="?attr/textColorPrimary"
-            android:textColorHint="?attr/textColorHint"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textColorHint="?android:attr/textColorHint"
             android:textSize="14sp"
             android:padding="8dp"
             android:inputType="textUri"
             android:imeOptions="actionGo" />
 
+        <!-- Go button -->
         <ImageView
             android:id="@+id/btn_go"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:src="@drawable/ic_go_white_24dp"
-            android:tint="?attr/textColorPrimaryInverse"
-            android:background="?attr/selectableItemBackground" />
+            android:tint="?android:attr/textColorPrimaryInverse"
+            android:background="?android:attr/selectableItemBackground" />
     </LinearLayout>
 
+    <!-- WebView container -->
     <FrameLayout
         android:id="@+id/webview_container"
         android:layout_width="match_parent"
