@@ -229,7 +229,7 @@
         android:parentActivityName=".ui.WalletActivity"
         android:windowSoftInputMode="adjustResize"
         android:configChanges="orientation|screenSize|keyboardHidden"
-        android:launchMode="singleInstance"
+        android:launchMode="singleTask" 
         android:alwaysRetainTaskState="true"
         android:noHistory="false"
         android:hardwareAccelerated="true" />
