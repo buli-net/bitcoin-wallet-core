@@ -6,7 +6,6 @@
     android:orientation="vertical"
     android:background="?android:attr/windowBackground">
 
-    <!-- Thanh công cụ — BÊ Y NGUYÊN MẪU, THÊM ID -->
     <LinearLayout
         android:id="@+id/toolbar_container"
         android:layout_width="match_parent"
@@ -16,7 +15,6 @@
         android:gravity="center_vertical"
         android:background="@color/bg_action_bar">
 
-        <!-- Nút BACK — Y NGUYÊN MẪU -->
         <ImageView
             android:id="@+id/btn_back_web"
             android:layout_width="40dp"
@@ -25,7 +23,6 @@
             android:tint="@color/fg_on_dark_bg_network_significant"
             android:background="?android:attr/selectableItemBackground" />
 
-        <!-- Nút FORWARD — Y NGUYÊN MẪU -->
         <ImageView
             android:id="@+id/btn_forward_web"
             android:layout_width="40dp"
@@ -34,7 +31,6 @@
             android:tint="@color/fg_on_dark_bg_network_significant"
             android:background="?android:attr/selectableItemBackground" />
 
-        <!-- Ô URL — Y NGUYÊN MẪU -->
         <EditText
             android:id="@+id/url_bar"
             android:layout_width="0dp"
@@ -50,27 +46,20 @@
             android:inputType="textUri"
             android:imeOptions="actionGo" />
 
-        <!-- Nút GO — Y NGUYÊN MẪU -->
         <ImageView
             android:id="@+id/btn_go"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:src="@drawable/ic_go_white_24dp"
             android:tint="@color/fg_on_dark_bg_network_significant"
+            android:layout_marginStart="4dp"
             android:background="?android:attr/selectableItemBackground" />
     </LinearLayout>
 
-    <!-- Nội dung web — THÊM ID KHỚP JAVA -->
-    <FrameLayout
-        android:id="@+id/webview_container"
+    <WebView
+        android:id="@+id/webview"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
-
-        <WebView
-            android:id="@+id/webview"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-    </FrameLayout>
+        android:layout_weight="1" />
 
 </LinearLayout>
