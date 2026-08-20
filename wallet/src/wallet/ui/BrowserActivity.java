@@ -8,7 +8,6 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
-import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.WebResourceRequest;
@@ -39,6 +38,10 @@ public class BrowserActivity extends AbstractWalletActivity {
     private WebChromeClient.CustomViewCallback customViewCallback;
     private int originalSystemUiVisibility;
 
+    // ✅ Lưu trạng thái để không bị reset
+    private boolean isWebViewRestored = false;
+    private String pendingUrl = null;
+
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -58,11 +61,11 @@ public class BrowserActivity extends AbstractWalletActivity {
         btnForwardWeb = findViewById(R.id.btn_forward_web);
         btnGo = findViewById(R.id.btn_go);
 
-        // ✅ Cập nhật màu ngay khi mở app
+        // ✅ Cập nhật màu ngay
         updateAllColors();
 
         // ==================================================
-        // BẬT FULL HẾT TÍNH NĂNG WEB
+        // ✅ BẬT FULL HẾT TÍNH NĂNG WEB
         // ==================================================
         WebSettings webSettings = webView.getSettings();
         webSettings.setJavaScriptEnabled(true);
@@ -92,8 +95,9 @@ public class BrowserActivity extends AbstractWalletActivity {
         webSettings.setUserAgentString(ua + " Chrome/120.0.0.0 Mobile");
         webView.setFocusable(true);
         webView.setFocusableInTouchMode(true);
-        webView.setBackgroundColor(0);
 
+        // ==================================================
+        // ✅ KHÔNG RESET — KHÔNG GỌI loadUrl TRỪ KHI CẦN
         // ==================================================
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -136,6 +140,7 @@ public class BrowserActivity extends AbstractWalletActivity {
             }
         });
 
+        // Nút bấm
         btnBackWeb.setOnClickListener(v -> { if (webView.canGoBack()) webView.goBack(); });
         btnForwardWeb.setOnClickListener(v -> { if (webView.canGoForward()) webView.goForward(); });
         btnGo.setOnClickListener(v -> handleUrlInput());
@@ -150,60 +155,60 @@ public class BrowserActivity extends AbstractWalletActivity {
             return false;
         });
 
+        // ==================================================
+        // ✅ LƯU + KHÔI PHỤC TRẠNG THÁI → KHÔNG BỊ RESET
+        // ==================================================
         if (savedInstanceState != null) {
+            // ✅ KHÔI PHỤC TRẠNG THÁI WEBVIEW — ĐỪNG GỌI loadUrl!
             webView.restoreState(savedInstanceState);
+            isWebViewRestored = true;
             String currentUrl = webView.getUrl();
             if (currentUrl != null) urlBar.setText(currentUrl);
         } else {
+            // ✅ CHỈ loadUrl LẦN ĐẦU MỚI MỞ
             Intent intent = getIntent();
             if (intent.getData() != null) {
-                String url = intent.getData().toString();
-                urlBar.setText(url);
-                webView.loadUrl(url);
+                pendingUrl = intent.getData().toString();
+                urlBar.setText(pendingUrl);
+                webView.loadUrl(pendingUrl);
             }
         }
     }
 
     // ==================================================
-    // ✅ FIX: MÀU CHỮ + GỢI Ô URL ĐỔI NGAY LẬP TỨC
+    // ✅ CẬP NHẬT MÀU — ĐỔI NGAY, KHÔNG ĐỤNG WEBVIEW
     // ==================================================
     private void updateAllColors() {
-        // Lấy màu thanh công cụ + icon theo mẫu
         int bgActionBarColor = getResources().getColor(R.color.bg_action_bar);
         int fgIconColor = getResources().getColor(R.color.fg_on_dark_bg_network_significant);
 
-        // 1. Thanh công cụ
+        // Thanh công cụ
         if (toolbarContainer != null) toolbarContainer.setBackgroundColor(bgActionBarColor);
 
-        // 2. Icon
+        // Icon
         if (btnBackWeb != null) btnBackWeb.setColorFilter(fgIconColor);
         if (btnForwardWeb != null) btnForwardWeb.setColorFilter(fgIconColor);
         if (btnGo != null) btnGo.setColorFilter(fgIconColor);
 
-        // ==================================================
-        // ✅ CHỮ Ô URL — LẤY MÀU THEME MỚI NHẤT → ĐỔI NGAY
-        // ==================================================
+        // ✅ Chữ + gợi ý ô URL — đổi ngay, không đụng nội dung
         if (urlBar != null) {
-            // Lấy màu chữ chính từ theme — LUÔN MỚI NHẤT
             int[] textColorAttr = { android.R.attr.textColorPrimary };
             TypedArray taText = obtainStyledAttributes(textColorAttr);
             int textColor = taText.getColor(0, 0xFF000000);
             taText.recycle();
-            urlBar.setTextColor(textColor); // ✅ Đổi ngay, không cần back ra
+            urlBar.setTextColor(textColor);
 
-            // Lấy màu gợi ý (hint) từ theme — cũng đổi ngay
             int[] hintColorAttr = { android.R.attr.textColorHint };
             TypedArray taHint = obtainStyledAttributes(hintColorAttr);
             int hintColor = taHint.getColor(0, 0xFF888888);
             taHint.recycle();
-            urlBar.setHintTextColor(hintColor); // ✅ Gợi ý cũng đổi ngay
+            urlBar.setHintTextColor(hintColor);
 
-            // Nền ô URL — đảm bảo drawable được tái tạo từ theme mới
             Drawable urlBg = getResources().getDrawable(R.drawable.edittext_background);
             urlBar.setBackground(urlBg);
         }
 
-        // 3. Nền WebView
+        // Nền WebView
         int[] windowBgAttr = { android.R.attr.windowBackground };
         TypedArray taBg = obtainStyledAttributes(windowBgAttr);
         int windowBg = taBg.getColor(0, 0xFFFFFFFF);
@@ -211,24 +216,47 @@ public class BrowserActivity extends AbstractWalletActivity {
         if (webView != null) webView.setBackgroundColor(windowBg);
     }
 
-    // ✅ Đổi theme/đổi cấu hình → GỌI NGAY, KHÔNG ĐỢI BACK RA
+    // ✅ Đổi theme → cập nhật màu NGAY, KHÔNG loadUrl → KHÔNG RESET
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        updateAllColors(); // 🔴 Đổi theme → chạy ngay, màu chữ cập nhật tức thì
+        updateAllColors(); // 🔴 CHỈ đổi màu, KHÔNG đụng WebView
     }
 
-    // ✅ Quay lại app → cũng cập nhật
+    // ✅ QUAY LẠI → KHÔNG loadUrl LẠI, CHỈ CẬP NHẬT MÀU
     @Override
     protected void onResume() {
         super.onResume();
-        updateAllColors();
+        updateAllColors(); // ✅ Đổi màu, KHÔNG reset trang
+        // KHÔNG gọi loadUrl — để WebView giữ nguyên trang!
     }
 
+    // ✅ LƯU TRẠNG THÁI TRƯỚC KHI TẠM DỪNG
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        if (webView != null) webView.saveState(outState);
+        if (webView != null) {
+            webView.saveState(outState); // ✅ Lưu lịch sử, URL, form...
+        }
+    }
+
+    // ✅ DỪNG — KHÔNG HỦY WEBVIEW
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (webView != null) {
+            webView.onPause(); // ✅ Tạm dừng, không hủy
+        }
+    }
+
+    // ✅ HOÀN TOÀN HUỶ — CHỈ KHI ĐÓNG HẲN
+    @Override
+    protected void onDestroy() {
+        if (webView != null) {
+            webView.destroy(); // ✅ Chỉ destroy khi đóng hẳn
+            webView = null;
+        }
+        super.onDestroy();
     }
 
     private void handleUrlInput() {
@@ -267,7 +295,7 @@ public class BrowserActivity extends AbstractWalletActivity {
             if (customView != null && customViewCallback != null) {
                 customViewCallback.onCustomViewHidden();
             }
-            finish();
+            finish(); // ✅ Đóng, không reset
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -280,9 +308,9 @@ public class BrowserActivity extends AbstractWalletActivity {
             return;
         }
         if (webView.canGoBack()) {
-            webView.goBack();
+            webView.goBack(); // ✅ Quay lại trang trước, không reset
         } else {
-            super.onBackPressed();
+            super.onBackPressed(); // ✅ Đóng khi hết lịch sử
         }
     }
 }
