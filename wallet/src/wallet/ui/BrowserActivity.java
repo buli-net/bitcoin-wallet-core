@@ -27,7 +27,7 @@ import java.net.URISyntaxException;
 public class BrowserActivity extends AbstractWalletActivity {
 
     private EditText urlBar;
-    private static WebView webView; // ✅ static — GIỮ NGUYÊN, KHÔNG TẠO LẠI
+    private WebView webView;
     private ImageView btnBackWeb;
     private ImageView btnForwardWeb;
     private ImageView btnGo;
@@ -39,10 +39,13 @@ public class BrowserActivity extends AbstractWalletActivity {
     private int originalSystemUiVisibility;
 
     // ========== LƯU TRẠNG THÁI — KHÔNG BỊ RESET VIDEO ==========
+    private static Bundle savedWebViewState = null;
     private static String savedUrl = null;
     private static int scrollX = 0;
     private static int scrollY = 0;
-    private static boolean isFirstInit = true;
+    private static boolean hasSavedState = false;
+    private static boolean isNewLink = false;
+    private static String savedUrlBeforePause = null;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -58,110 +61,47 @@ public class BrowserActivity extends AbstractWalletActivity {
         }
 
         urlBar = findViewById(R.id.url_bar);
+        webView = findViewById(R.id.webview);
         btnBackWeb = findViewById(R.id.btn_back_web);
         btnForwardWeb = findViewById(R.id.btn_forward_web);
         btnGo = findViewById(R.id.btn_go);
 
-        // ✅ TẠO WEBVIEW 1 LẦN DUY NHẤT — KHÔNG TẠO LẠI
-        if (webView == null) {
-            webView = findViewById(R.id.webview);
-            setupWebView(webView);
-            isFirstInit = true;
-        } else {
-            // ✅ MỞ LẠI — GỬI LẠI VIEW CŨ, KHÔNG TẠO MỚI
-            ViewGroup parent = (ViewGroup) webView.getParent();
-            if (parent != null) parent.removeView(webView);
-            FrameLayout container = findViewById(R.id.webview_container);
-            if (container != null) container.addView(webView);
-            isFirstInit = false;
-        }
-
         updateAllColors();
 
-        // ✅ KHÔI PHỤC TRẠNG THÁI — KHÔNG LOAD LẠI
-        if (savedUrl != null && !isFirstInit) {
-            urlBar.setText(savedUrl);
-            webView.scrollTo(scrollX, scrollY);
-        }
+        WebSettings webSettings = webView.getSettings();
+        webSettings.setJavaScriptEnabled(true);
+        webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
+        webSettings.setDomStorageEnabled(true);
+        webSettings.setDatabaseEnabled(true);
+        webSettings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+        webSettings.setAllowFileAccess(true);
+        webSettings.setAllowContentAccess(true);
+        webSettings.setAllowFileAccessFromFileURLs(true);
+        webSettings.setAllowUniversalAccessFromFileURLs(true);
+        webSettings.setLoadsImagesAutomatically(true);
+        webSettings.setBlockNetworkImage(false);
+        webSettings.setBlockNetworkLoads(false);
+        webSettings.setMediaPlaybackRequiresUserGesture(false);
+        webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        webSettings.setGeolocationEnabled(true);
+        webSettings.setUseWideViewPort(true);
+        webSettings.setLoadWithOverviewMode(true);
+        webSettings.setSupportZoom(true);
+        webSettings.setBuiltInZoomControls(true);
+        webSettings.setDisplayZoomControls(false);
 
-        // ==================================================
-        // BẬT TẤT CẢ TÍNH NĂNG — ĐỊNH DẠNG VIDEO + CACHE
-        // ==================================================
-        if (isFirstInit) {
-            WebSettings webSettings = webView.getSettings();
-            webSettings.setJavaScriptEnabled(true);
-            webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
-            webSettings.setDomStorageEnabled(true);
-            webSettings.setDatabaseEnabled(true);
-            webSettings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK); // ✅ Ưu tiên cache — không tải lại
-            webSettings.setAllowFileAccess(true);
-            webSettings.setAllowContentAccess(true);
-            webSettings.setAllowFileAccessFromFileURLs(true);
-            webSettings.setAllowUniversalAccessFromFileURLs(true);
-            webSettings.setLoadsImagesAutomatically(true);
-            webSettings.setBlockNetworkImage(false);
-            webSettings.setBlockNetworkLoads(false);
-            webSettings.setMediaPlaybackRequiresUserGesture(false);
-            webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-            webSettings.setGeolocationEnabled(true);
-            webSettings.setUseWideViewPort(true);
-            webSettings.setLoadWithOverviewMode(true);
-            webSettings.setSupportZoom(true);
-            webSettings.setBuiltInZoomControls(true);
-            webSettings.setDisplayZoomControls(false);
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        webSettings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-            webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-            webSettings.setRenderPriority(WebSettings.RenderPriority.HIGH);
-            getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        String ua = webSettings.getUserAgentString();
+        webSettings.setUserAgentString(ua + " Chrome/120.0.0.0 Mobile");
+        webView.setFocusable(true);
+        webView.setFocusableInTouchMode(true);
 
-            String ua = webSettings.getUserAgentString();
-            webSettings.setUserAgentString(ua + " Chrome/120.0.0.0 Mobile");
-            webView.setFocusable(true);
-            webView.setFocusableInTouchMode(true);
-
-            setupWebViewClients();
-        }
-
-        // ==================================================
-        // NÚT BẤM — GIỮ NGUYÊN
-        // ==================================================
-        btnBackWeb.setOnClickListener(v -> { if (webView.canGoBack()) webView.goBack(); });
-        btnForwardWeb.setOnClickListener(v -> { if (webView.canGoForward()) webView.goForward(); });
-        btnGo.setOnClickListener(v -> handleUrlInput());
-
-        urlBar.setOnEditorActionListener((v, actionId, event) -> {
-            if (actionId == EditorInfo.IME_ACTION_GO ||
-                (event != null && event.getKeyCode() == android.view.KeyEvent.KEYCODE_ENTER
-                    && event.getAction() == android.view.KeyEvent.ACTION_DOWN)) {
-                handleUrlInput();
-                return true;
-            }
-            return false;
-        });
-
-        // ==================================================
-        // LINK MỚI — CHỈ LOAD NẾU KHÁC URL HIỆN TẠI
-        // ==================================================
-        Intent intent = getIntent();
-        Uri intentData = intent.getData();
-        if (intentData != null) {
-            String newUrl = intentData.toString();
-            if (!newUrl.equals(savedUrl)) {
-                urlBar.setText(newUrl);
-                webView.loadUrl(newUrl);
-                savedUrl = newUrl;
-            }
-        }
-    }
-
-    // ✅ TÁCH RIÊNG SETUP — CHỈ CHẠY 1 LẦN
-    private void setupWebView(WebView wv) {}
-
-    private void setupWebViewClients() {
-        // ==================================================
-        // XỬ LÝ LINK — CÙNG URL → KHÔNG LOAD LẠI
-        // ==================================================
         webView.setWebViewClient(new WebViewClient() {
+            private boolean isRestoring = false;
+
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
@@ -172,7 +112,6 @@ public class BrowserActivity extends AbstractWalletActivity {
                         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
                         view.getContext().startActivity(intent);
                         urlBar.setText(url);
-                        savedUrl = url;
                         return true;
                     } catch (Exception e) {
                         urlBar.setText(url);
@@ -180,30 +119,39 @@ public class BrowserActivity extends AbstractWalletActivity {
                     }
                 }
 
-                // ✅ CÙNG URL → BỎ QUA, KHÔNG LOAD LẠI
-                if (url.equals(savedUrl)) {
+                // ✅ NẾU ĐANG KHÔI PHỤC → KHÔNG LOAD LẠI
+                if (isRestoring) {
+                    isRestoring = false;
+                    urlBar.setText(url);
+                    return true;
+                }
+
+                // ✅ NẾU URL GIỐNG HỆT → KHÔNG LOAD LẠI
+                if (url.equals(view.getUrl()) && !isNewLink) {
                     urlBar.setText(url);
                     return true;
                 }
 
                 view.loadUrl(url);
                 urlBar.setText(url);
-                savedUrl = url;
                 return true;
             }
 
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                savedUrl = url;
                 if (urlBar != null && !urlBar.getText().toString().equals(url)) {
                     urlBar.setText(url);
                 }
-                webView.scrollTo(scrollX, scrollY);
+                savedUrl = url;
+                // ✅ KHÔI PHỤC VỊ TRÍ CUỘN — CHỈ 1 LẦN
+                if (hasSavedState && !isNewLink) {
+                    webView.scrollTo(scrollX, scrollY);
+                    hasSavedState = false;
+                }
             }
         });
 
-        // ✅ GIỮ NGUYÊN FULLSCREEN VIDEO
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onShowCustomView(View view, CustomViewCallback callback) {
@@ -234,35 +182,68 @@ public class BrowserActivity extends AbstractWalletActivity {
                 customViewCallback = null;
             }
         });
-    }
 
-    // ==================================================
-    // ✅ LƯU TRƯỚC KHI TẠM DỪNG — KHÔNG DỪNG WEBVIEW
-    // ==================================================
-    @Override
-    protected void onPause() {
-        super.onPause();
-        if (webView != null && !isFinishing()) {
-            savedUrl = webView.getUrl();
-            scrollX = webView.getScrollX();
-            scrollY = webView.getScrollY();
-            // ❌ KHÔNG GỌI webView.onPause() — VIDEO TIẾP TỤC PHÁT
+        btnBackWeb.setOnClickListener(v -> { if (webView.canGoBack()) webView.goBack(); });
+        btnForwardWeb.setOnClickListener(v -> { if (webView.canGoForward()) webView.goForward(); });
+        btnGo.setOnClickListener(v -> handleUrlInput());
+
+        urlBar.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_GO ||
+                (event != null && event.getKeyCode() == android.view.KeyEvent.KEYCODE_ENTER
+                    && event.getAction() == android.view.KeyEvent.ACTION_DOWN)) {
+                handleUrlInput();
+                return true;
+            }
+            return false;
+        });
+
+        Intent intent = getIntent();
+        Uri intentData = intent.getData();
+
+        if (intentData != null) {
+            String newUrl = intentData.toString();
+            urlBar.setText(newUrl);
+            webView.loadUrl(newUrl);
+            clearSavedState();
+            isNewLink = true;
+        } 
+        // ✅ QUAN TRỌNG: NẾU CÓ DỮ LIỆU LƯU → KHÔI PHỤC, KHÔNG LOAD LẠI
+        else if (savedWebViewState != null && savedUrlBeforePause != null) {
+            webView.restoreState(savedWebViewState);
+            urlBar.setText(savedUrlBeforePause);
+            isNewLink = false;
+            hasSavedState = true;
+        } 
+        else if (savedInstanceState != null) {
+            webView.restoreState(savedInstanceState);
+            String restoredUrl = webView.getUrl();
+            if (restoredUrl != null) urlBar.setText(restoredUrl);
         }
     }
 
+    // ✅ LƯU TRẠNG THÁI KHI RA NỀN — KHÔNG DỪNG WEBVIEW
+    @Override
+    protected void onPause() {
+        if (webView != null && !isFinishing()) {
+            savedWebViewState = new Bundle();
+            webView.saveState(savedWebViewState);
+            savedUrlBeforePause = webView.getUrl();
+            scrollX = webView.getScrollX();
+            scrollY = webView.getScrollY();
+            hasSavedState = true;
+        }
+        super.onPause();
+        // ❌ KHÔNG GỌI webView.onPause() → VIDEO TIẾP TỤC PHÁT
+    }
+
+    // ✅ KHÔI PHỤC KHI QUAY LẠI — KHÔNG LOAD LẠI
     @Override
     protected void onResume() {
         super.onResume();
         updateAllColors();
-        if (webView != null) {
-            webView.scrollTo(scrollX, scrollY);
-            // ❌ KHÔNG GỌI webView.onResume() — TRÁNH RESET
-        }
+        // ❌ KHÔNG GỌI webView.onResume() → TRÁNH RESET
     }
 
-    // ==================================================
-    // ✅ NHẬN LINK MỚI KHI ĐANG MỞ
-    // ==================================================
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
@@ -270,24 +251,56 @@ public class BrowserActivity extends AbstractWalletActivity {
         Uri data = intent.getData();
         if (data != null) {
             String newUrl = data.toString();
-            if (!newUrl.equals(savedUrl)) {
-                savedUrl = newUrl;
-                urlBar.setText(newUrl);
-                webView.loadUrl(newUrl);
-            }
+            urlBar.setText(newUrl);
+            webView.loadUrl(newUrl);
+            clearSavedState();
+            isNewLink = true;
         }
     }
 
+    private void clearSavedState() {
+        savedWebViewState = null;
+        savedUrlBeforePause = null;
+        scrollX = 0;
+        scrollY = 0;
+        hasSavedState = false;
+        isNewLink = false;
+    }
+
+    // ✅ LƯU TRƯỚC KHI ĐÓNG
     @Override
     public void finish() {
-        if (webView != null) {
-            savedUrl = webView.getUrl();
+        if (webView != null && !isFinishing()) {
+            savedWebViewState = new Bundle();
+            webView.saveState(savedWebViewState);
+            savedUrlBeforePause = webView.getUrl();
             scrollX = webView.getScrollX();
             scrollY = webView.getScrollY();
+            hasSavedState = true;
         }
         super.finish();
     }
 
+    // ✅ NÚT BACK TRÊN THANH ACTION BAR → QUAY VỀ MÀN HÌNH CHÍNH, KHÔNG RESET
+    @Override
+    public boolean onOptionsItemSelected(android.view.MenuItem item) {
+        if (item.getItemId() == android.R.id.home) {
+            // ✅ LƯU TRƯỚC KHI QUAY LẠI MÀN HÌNH CHÍNH
+            if (webView != null && !isFinishing()) {
+                savedWebViewState = new Bundle();
+                webView.saveState(savedWebViewState);
+                savedUrlBeforePause = webView.getUrl();
+                scrollX = webView.getScrollX();
+                scrollY = webView.getScrollY();
+                hasSavedState = true;
+            }
+            finish();
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    // ✅ NÚT BACK CỦA HỆ THỐNG → QUAY LẠI LỊCH SỬ WEB TRƯỚC, KHÔNG THÌ THOÁT
     @Override
     public void onBackPressed() {
         if (customView != null && customViewCallback != null) {
@@ -297,25 +310,19 @@ public class BrowserActivity extends AbstractWalletActivity {
         if (webView.canGoBack()) {
             webView.goBack();
         } else {
+            // ✅ LƯU TRƯỚC KHI THOÁT
+            if (webView != null && !isFinishing()) {
+                savedWebViewState = new Bundle();
+                webView.saveState(savedWebViewState);
+                savedUrlBeforePause = webView.getUrl();
+                scrollX = webView.getScrollX();
+                scrollY = webView.getScrollY();
+                hasSavedState = true;
+            }
             super.onBackPressed();
         }
     }
 
-    @Override
-    public boolean onOptionsItemSelected(android.view.MenuItem item) {
-        if (item.getItemId() == android.R.id.home) {
-            if (customView != null && customViewCallback != null) {
-                customViewCallback.onCustomViewHidden();
-            }
-            finish();
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
-
-    // ==================================================
-    // ✅ GIỮ NGUYÊN TOÀN BỘ UPDATE MÀU
-    // ==================================================
     private void updateAllColors() {
         int bgActionBarColor = getResources().getColor(R.color.bg_action_bar);
         int fgIconColor = getResources().getColor(R.color.fg_on_dark_bg_network_significant);
@@ -365,11 +372,9 @@ public class BrowserActivity extends AbstractWalletActivity {
         } else {
             finalUrl = "https://www.google.com/search?q=" + Uri.encode(input);
         }
-        if (!finalUrl.equals(savedUrl)) {
-            savedUrl = finalUrl;
-            webView.loadUrl(finalUrl);
-            urlBar.setText(finalUrl);
-        }
+        webView.loadUrl(finalUrl);
+        urlBar.setText(finalUrl);
+        clearSavedState();
     }
 
     private boolean isValidUrl(String input) {
@@ -394,12 +399,8 @@ public class BrowserActivity extends AbstractWalletActivity {
         if (webView != null) webView.saveState(outState);
     }
 
-    // ✅ KHÔNG DESTROY WEBVIEW — giữ cache + video
     @Override
     protected void onDestroy() {
-        if (webView != null && webView.getParent() != null) {
-            ((ViewGroup) webView.getParent()).removeView(webView);
-        }
         super.onDestroy();
     }
 }
