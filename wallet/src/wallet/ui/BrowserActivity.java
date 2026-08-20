@@ -30,7 +30,7 @@ public class BrowserActivity extends AbstractWalletActivity {
     private WebView webView;
     private ImageView btnBackWeb;
     private ImageView btnForwardWeb;
-    private ImageView btnRefreshWeb; // ✅ 1. Đổi tên biến từ btnGo → btnRefreshWeb
+    private ImageView btnRefreshWeb;
     private LinearLayout toolbarContainer;
     private View rootLayout;
 
@@ -63,7 +63,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         webView = findViewById(R.id.webview);
         btnBackWeb = findViewById(R.id.btn_back_web);
         btnForwardWeb = findViewById(R.id.btn_forward_web);
-        btnRefreshWeb = findViewById(R.id.btn_refresh_web); // ✅ 2. Gán id mới khớp XML
+        btnRefreshWeb = findViewById(R.id.btn_refresh_web); 
 
         updateAllColors();
 
