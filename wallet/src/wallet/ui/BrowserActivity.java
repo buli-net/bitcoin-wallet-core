@@ -56,7 +56,7 @@ public class BrowserActivity extends AbstractWalletActivity {
 
         if (getActionBar() != null) {
             getActionBar().setDisplayHomeAsUpEnabled(true);
-            getActionBar().setHomeButtonEnabled(true);
+          //  getActionBar().setHomeButtonEnabled(true);
         }
 
         urlBar = findViewById(R.id.url_bar);
