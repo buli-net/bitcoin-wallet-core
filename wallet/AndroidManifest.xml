@@ -226,15 +226,13 @@
     android:theme="@style/My.Preference"
     android:exported="false"
     android:parentActivityName="wallet.ui.WalletActivity"
-     />
-
-
-<!-- end
-        android:windowSoftInputMode="adjustResize"
-    android:configChanges="screenSize"
+    android:windowSoftInputMode="adjustResize"
+    android:configChanges="orientation|screenSize|keyboard|keyboardHidden"
     android:launchMode="standard"
-    android:noHistory="false"
-        -->
+    android:noHistory="false" />
+
+
+<!-- end -->
 
         <provider
             android:name="androidx.core.content.FileProvider"
