@@ -1,65 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="?android:attr/windowBackground">
+    android:orientation="vertical">
 
     <LinearLayout
-        android:id="@+id/toolbar_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:padding="8dp"
-        android:gravity="center_vertical"
-        android:background="@color/bg_action_bar">
-
-        <ImageView
-            android:id="@+id/btn_back_web"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@drawable/ic_back_white_24dp"
-            android:tint="@color/fg_on_dark_bg_network_significant"
-            android:background="?android:attr/selectableItemBackground" />
-
-        <ImageView
-            android:id="@+id/btn_forward_web"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@drawable/ic_forward_white_24dp"
-            android:tint="@color/fg_on_dark_bg_network_significant"
-            android:background="?android:attr/selectableItemBackground" />
+        android:gravity="center_vertical">
 
         <EditText
             android:id="@+id/url_bar"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="8dp"
-            android:hint="URL..."
-            android:background="@drawable/edittext_background"
-            android:textColor="?android:attr/textColorPrimary"
-            android:textSize="14sp"
-            android:padding="8dp"
+            android:hint="URL"
             android:inputType="textUri"
-            android:imeOptions="actionGo" />
+            android:layout_marginEnd="8dp"/>
+
+        <ImageView
+            android:id="@+id/btn_back_web"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_back"/>
+
+        <ImageView
+            android:id="@+id/btn_forward_web"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_forward"/>
 
         <ImageView
             android:id="@+id/btn_go"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:src="@drawable/ic_go_white_24dp"
-            android:tint="@color/fg_on_dark_bg_network_significant"
-            android:layout_marginStart="4dp"
-            android:background="?android:attr/selectableItemBackground" />
+            android:src="@drawable/ic_go"/>
     </LinearLayout>
 
-    <WebView
-        android:id="@+id/webview"
+    <LinearLayout
+        android:id="@+id/webview_container"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1"
+        android:orientation="vertical"/>
 
 </LinearLayout>
