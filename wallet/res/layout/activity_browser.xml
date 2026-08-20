@@ -1,49 +1,70 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:background="?android:attr/windowBackground">
 
+    <!-- Thanh công cụ — GIỮ NGUYÊN 100% -->
     <LinearLayout
+        android:id="@+id/toolbar_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:padding="8dp"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:background="@color/bg_action_bar">
 
+        <!-- Nút BACK — GIỮ NGUYÊN icon + màu + background -->
+        <ImageView
+            android:id="@+id/btn_back_web"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_back_white_24dp"
+            android:tint="@color/fg_on_dark_bg_network_significant"
+            android:background="?android:attr/selectableItemBackground" />
+
+        <!-- Nút FORWARD — GIỮ NGUYÊN icon + màu + background -->
+        <ImageView
+            android:id="@+id/btn_forward_web"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_forward_white_24dp"
+            android:tint="@color/fg_on_dark_bg_network_significant"
+            android:background="?android:attr/selectableItemBackground" />
+
+        <!-- Ô URL — GIỮ NGUYÊN background + màu chữ + kích thước -->
         <EditText
             android:id="@+id/url_bar"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="URL"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:hint="URL..."
+            android:background="@drawable/edittext_background"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textSize="14sp"
+            android:padding="8dp"
             android:inputType="textUri"
-            android:layout_marginEnd="8dp"/>
+            android:imeOptions="actionGo" />
 
-        <ImageView
-            android:id="@+id/btn_back_web"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@drawable/ic_back"/>
-
-        <ImageView
-            android:id="@+id/btn_forward_web"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@drawable/ic_forward"/>
-
+        <!-- Nút GO — GIỮ NGUYÊN icon + màu + background -->
         <ImageView
             android:id="@+id/btn_go"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:src="@drawable/ic_go"/>
+            android:src="@drawable/ic_go_white_24dp"
+            android:tint="@color/fg_on_dark_bg_network_significant"
+            android:background="?android:attr/selectableItemBackground" />
     </LinearLayout>
 
-    <LinearLayout
+    <!-- Khung chứa WebView — ĐỦ ID KHỚP JAVA, KHÔNG CÓ WebView tĩnh (được gắn động từ code) -->
+    <FrameLayout
         android:id="@+id/webview_container"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:orientation="vertical"/>
+        android:layout_weight="1" />
 
 </LinearLayout>
