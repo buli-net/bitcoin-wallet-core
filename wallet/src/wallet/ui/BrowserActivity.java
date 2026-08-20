@@ -23,8 +23,6 @@ import wallet.R;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Arrays;
-import java.util.List;
 
 public class BrowserActivity extends AbstractWalletActivity {
 
@@ -40,16 +38,10 @@ public class BrowserActivity extends AbstractWalletActivity {
     private WebChromeClient.CustomViewCallback customViewCallback;
     private int originalSystemUiVisibility;
 
+    // ✅ Lưu trạng thái để không bị reset khi back ra vào lại
     private static Bundle savedWebViewState = null;
     private static String currentUrl = null;
     private static boolean hasState = false;
-
-    // ✅ Danh sách scheme cần mở bên ngoài (TikTok, Facebook, Instagram...)
-    private static final List<String> EXTERNAL_SCHEMES = Arrays.asList(
-        "snssdk1180", "snssdk1128", "snssdk1166", // TikTok
-        "fb", "fb-messenger", "instagram", "twitter", "whatsapp",
-        "intent", "market", "tel", "mailto", "geo"
-    );
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -89,7 +81,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         webSettings.setBlockNetworkImage(false);
         webSettings.setBlockNetworkLoads(false);
         webSettings.setMediaPlaybackRequiresUserGesture(false);
-        webSettings.setMixedContentMode(2);
+        webSettings.setMixedContentMode(2); // MIXED_CONTENT_ALWAYS_ALLOW
         webSettings.setGeolocationEnabled(true);
         webSettings.setUseWideViewPort(true);
         webSettings.setLoadWithOverviewMode(true);
@@ -105,7 +97,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         webView.setFocusableInTouchMode(true);
 
         // ==================================================
-        // ✅ FIX CHÍNH — XỬ LÝ SCHEME TIKTOK & URL BÊN NGOÀI
+        // ✅ FIX CHUNG — XỬ LÝ TẤT CẢ SCHEME KHÔNG PHẢI HTTP/HTTPS
         // ==================================================
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -113,34 +105,21 @@ public class BrowserActivity extends AbstractWalletActivity {
                 String url = request.getUrl().toString();
                 String scheme = request.getUrl().getScheme();
 
-                // ✅ Nếu là scheme không chuẩn như snssdk1180:// → mở bằng ứng dụng
-                if (scheme != null && EXTERNAL_SCHEMES.contains(scheme.toLowerCase())) {
+                // ✅ Nếu KHÔNG phải http/https → mở bằng ứng dụng hệ thống
+                if (scheme != null && !scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https")) {
                     try {
                         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
                         view.getContext().startActivity(intent);
                         urlBar.setText(url);
-                        return true; // ✅ Không load trong WebView
+                        return true; // ✅ Không load trong WebView, chuyển ra app
                     } catch (Exception e) {
-                        // Không có ứng dụng → mở link web thay thế
-                        String webUrl = "https://www.tiktok.com";
-                        if (url.contains("aweme/detail")) {
-                            // Trích xuất ID video từ URL TikTok
-                            String path = request.getUrl().getPath();
-                            if (path != null && path.contains("/detail/")) {
-                                String videoId = path.replaceAll(".*/detail/", "").replaceAll("[^0-9].*", "");
-                                if (!videoId.isEmpty()) {
-                                    webUrl = "https://www.tiktok.com/t/ZTR" + videoId + "/";
-                                }
-                            }
-                        }
-                        view.loadUrl(webUrl);
-                        urlBar.setText(webUrl);
-                        currentUrl = webUrl;
+                        // ❌ Không có ứng dụng xử lý → thông báo & không làm gì
+                        urlBar.setText(url);
                         return true;
                     }
                 }
 
-                // ✅ URL bình thường → load trong WebView
+                // ✅ http/https → load bình thường trong WebView
                 view.loadUrl(url);
                 urlBar.setText(url);
                 currentUrl = url;
@@ -188,6 +167,7 @@ public class BrowserActivity extends AbstractWalletActivity {
             }
         });
 
+        // Nút bấm
         btnBackWeb.setOnClickListener(v -> { if (webView.canGoBack()) webView.goBack(); });
         btnForwardWeb.setOnClickListener(v -> { if (webView.canGoForward()) webView.goForward(); });
         btnGo.setOnClickListener(v -> handleUrlInput());
@@ -225,6 +205,9 @@ public class BrowserActivity extends AbstractWalletActivity {
         }
     }
 
+    // ==================================================
+    // ✅ LƯU TRẠNG THÁI TRƯỚC KHI ĐÓNG — KHÔNG BỊ RESET
+    // ==================================================
     @Override
     public void onPause() {
         super.onPause();
@@ -269,6 +252,8 @@ public class BrowserActivity extends AbstractWalletActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    // ==================================================
+    // ✅ CẬP NHẬT MÀU — ĐỔI NGAY LẬP TỨC
     // ==================================================
     private void updateAllColors() {
         int bgActionBarColor = getResources().getColor(R.color.bg_action_bar);
