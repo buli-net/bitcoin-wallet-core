@@ -220,8 +220,6 @@
         
   <!-- Web Browser Activity -->
 
-
-
 <activity
     android:name="wallet.ui.BrowserActivity"
     android:label="@string/menu_web_browser"
@@ -233,7 +231,10 @@
     android:launchMode="singleTask"
     android:alwaysRetainTaskState="true"
     android:noHistory="false"
-    android:hardwareAccelerated="true" />
+    android:hardwareAccelerated="true"
+    android:process=":browser_process" />
+
+
 
 <!-- end -->
 
