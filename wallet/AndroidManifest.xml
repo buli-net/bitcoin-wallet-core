@@ -220,6 +220,7 @@
         
   <!-- Web Browser Activity -->
 
+
 <activity
     android:name="wallet.ui.BrowserActivity"
     android:label="@string/menu_web_browser"
@@ -227,11 +228,7 @@
     android:exported="false"
     android:parentActivityName="wallet.ui.WalletActivity"
     android:windowSoftInputMode="adjustResize"
-    android:configChanges="orientation|screenSize|keyboardHidden"
-    android:launchMode="standard"
-    android:noHistory="false" />
-
-
+    android:configChanges="orientation|screenSize|keyboardHidden" />
 
 
 <!-- end -->
