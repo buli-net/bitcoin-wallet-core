@@ -3,6 +3,7 @@ package wallet.ui;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
+import android.content.res.TypedArray;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
@@ -57,11 +58,11 @@ public class BrowserActivity extends AbstractWalletActivity {
         btnForwardWeb = findViewById(R.id.btn_forward_web);
         btnGo = findViewById(R.id.btn_go);
 
-        // ✅ CẬP NHẬT TẤT CẢ MÀU NGAY KHI MỞ APP
+        // ✅ Cập nhật màu ngay khi mở app
         updateAllColors();
 
         // ==================================================
-        // ✅ BẬT FULL HẾT TÍNH NĂNG WEB — KHÔNG CHẶN GÌ
+        // BẬT FULL HẾT TÍNH NĂNG WEB
         // ==================================================
         WebSettings webSettings = webView.getSettings();
         webSettings.setJavaScriptEnabled(true);
@@ -164,51 +165,60 @@ public class BrowserActivity extends AbstractWalletActivity {
     }
 
     // ==================================================
-    // ✅ CẬP NHẬT TẤT CẢ MÀU — BAO GỒM NỀN Ô URL — ĐỔI NGAY LẬP TỨC
+    // ✅ FIX: MÀU CHỮ + GỢI Ô URL ĐỔI NGAY LẬP TỨC
     // ==================================================
     private void updateAllColors() {
-        // Lấy màu theo mẫu
+        // Lấy màu thanh công cụ + icon theo mẫu
         int bgActionBarColor = getResources().getColor(R.color.bg_action_bar);
         int fgIconColor = getResources().getColor(R.color.fg_on_dark_bg_network_significant);
 
-        // === 1. Thanh công cụ ===
-        if (toolbarContainer != null) {
-            toolbarContainer.setBackgroundColor(bgActionBarColor);
-        }
+        // 1. Thanh công cụ
+        if (toolbarContainer != null) toolbarContainer.setBackgroundColor(bgActionBarColor);
 
-        // === 2. Icon nút ===
+        // 2. Icon
         if (btnBackWeb != null) btnBackWeb.setColorFilter(fgIconColor);
         if (btnForwardWeb != null) btnForwardWeb.setColorFilter(fgIconColor);
         if (btnGo != null) btnGo.setColorFilter(fgIconColor);
 
-        // === 3. Ô URL — ĐỔI NỀN + MÀU CHỮ NGAY ===
+        // ==================================================
+        // ✅ CHỮ Ô URL — LẤY MÀU THEME MỚI NHẤT → ĐỔI NGAY
+        // ==================================================
         if (urlBar != null) {
-            // Lấy drawable nền từ theme (giống cách mẫu dùng @drawable/edittext_background)
+            // Lấy màu chữ chính từ theme — LUÔN MỚI NHẤT
+            int[] textColorAttr = { android.R.attr.textColorPrimary };
+            TypedArray taText = obtainStyledAttributes(textColorAttr);
+            int textColor = taText.getColor(0, 0xFF000000);
+            taText.recycle();
+            urlBar.setTextColor(textColor); // ✅ Đổi ngay, không cần back ra
+
+            // Lấy màu gợi ý (hint) từ theme — cũng đổi ngay
+            int[] hintColorAttr = { android.R.attr.textColorHint };
+            TypedArray taHint = obtainStyledAttributes(hintColorAttr);
+            int hintColor = taHint.getColor(0, 0xFF888888);
+            taHint.recycle();
+            urlBar.setHintTextColor(hintColor); // ✅ Gợi ý cũng đổi ngay
+
+            // Nền ô URL — đảm bảo drawable được tái tạo từ theme mới
             Drawable urlBg = getResources().getDrawable(R.drawable.edittext_background);
             urlBar.setBackground(urlBg);
-            
-            // Màu chữ theo theme
-            int textColor = getResources().getColor(android.R.color.primary_text_light);
-            // Hoặc dùng theme attr: textColorPrimary — lấy trực tiếp để đổi ngay
-            int styledTextColor = getTheme().obtainStyledAttributes(
-                new int[]{android.R.attr.textColorPrimary}).getColor(0, 0xFF000000);
-            urlBar.setTextColor(styledTextColor);
         }
 
-        // === 4. Nền WebView ===
-        int windowBg = getTheme().obtainStyledAttributes(
-            new int[]{android.R.attr.windowBackground}).getColor(0, 0xFFFFFFFF);
+        // 3. Nền WebView
+        int[] windowBgAttr = { android.R.attr.windowBackground };
+        TypedArray taBg = obtainStyledAttributes(windowBgAttr);
+        int windowBg = taBg.getColor(0, 0xFFFFFFFF);
+        taBg.recycle();
         if (webView != null) webView.setBackgroundColor(windowBg);
     }
 
-    // ✅ Đổi cấu hình → cập nhật màu NGAY
+    // ✅ Đổi theme/đổi cấu hình → GỌI NGAY, KHÔNG ĐỢI BACK RA
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        updateAllColors();
+        updateAllColors(); // 🔴 Đổi theme → chạy ngay, màu chữ cập nhật tức thì
     }
 
-    // ✅ Quay lại màn hình → cập nhật màu NGAY
+    // ✅ Quay lại app → cũng cập nhật
     @Override
     protected void onResume() {
         super.onResume();
