@@ -6,7 +6,9 @@
     android:orientation="vertical"
     android:background="?android:attr/windowBackground">
 
+    <!-- Thanh công cụ — PHẢI CÓ ID: toolbar_container -->
     <LinearLayout
+        android:id="@+id/toolbar_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
@@ -14,6 +16,7 @@
         android:gravity="center_vertical"
         android:background="?android:attr/colorPrimary">
 
+        <!-- Nút Back -->
         <ImageView
             android:id="@+id/btn_back_web"
             android:layout_width="40dp"
@@ -21,6 +24,7 @@
             android:src="@drawable/ic_back_white_24dp"
             android:background="?android:attr/selectableItemBackground" />
 
+        <!-- Nút Forward -->
         <ImageView
             android:id="@+id/btn_forward_web"
             android:layout_width="40dp"
@@ -29,6 +33,7 @@
             android:layout_marginStart="4dp"
             android:background="?android:attr/selectableItemBackground" />
 
+        <!-- Ô URL -->
         <EditText
             android:id="@+id/url_bar"
             android:layout_width="0dp"
@@ -45,6 +50,7 @@
             android:inputType="textUri"
             android:imeOptions="actionGo" />
 
+        <!-- Nút Go -->
         <ImageView
             android:id="@+id/btn_go"
             android:layout_width="40dp"
@@ -54,6 +60,7 @@
             android:background="?android:attr/selectableItemBackground" />
     </LinearLayout>
 
+    <!-- Khu vực WebView — PHẢI CÓ ID: webview_container -->
     <FrameLayout
         android:id="@+id/webview_container"
         android:layout_width="match_parent"
