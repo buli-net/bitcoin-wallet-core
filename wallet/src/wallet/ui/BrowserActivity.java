@@ -3,7 +3,7 @@ package wallet.ui;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
-import android.content.res.TypedArray;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
@@ -57,13 +57,13 @@ public class BrowserActivity extends AbstractWalletActivity {
         btnForwardWeb = findViewById(R.id.btn_forward_web);
         btnGo = findViewById(R.id.btn_go);
 
-        updateThemeColors();
+        // ✅ CẬP NHẬT TẤT CẢ MÀU NGAY KHI MỞ APP
+        updateAllColors();
 
         // ==================================================
-        // ✅ BẬT FULL HẾT TẤT CẢ TÍNH NĂNG WEB — KHÔNG CHẶN GÌ
+        // ✅ BẬT FULL HẾT TÍNH NĂNG WEB — KHÔNG CHẶN GÌ
         // ==================================================
         WebSettings webSettings = webView.getSettings();
-
         webSettings.setJavaScriptEnabled(true);
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
         webSettings.setDomStorageEnabled(true);
@@ -77,10 +77,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         webSettings.setBlockNetworkImage(false);
         webSettings.setBlockNetworkLoads(false);
         webSettings.setMediaPlaybackRequiresUserGesture(false);
-        
-        // ✅ HTTP + HTTPS TRỘN NHAU — DÙNG HẰNG SỐ TRỰC TIẾP
-        webSettings.setMixedContentMode(2); // MIXED_CONTENT_ALWAYS_ALLOW = 2
-        
+        webSettings.setMixedContentMode(2); // MIXED_CONTENT_ALWAYS_ALLOW
         webSettings.setGeolocationEnabled(true);
         webSettings.setUseWideViewPort(true);
         webSettings.setLoadWithOverviewMode(true);
@@ -90,10 +87,8 @@ public class BrowserActivity extends AbstractWalletActivity {
 
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         webSettings.setRenderPriority(WebSettings.RenderPriority.HIGH);
-
         String ua = webSettings.getUserAgentString();
         webSettings.setUserAgentString(ua + " Chrome/120.0.0.0 Mobile");
-
         webView.setFocusable(true);
         webView.setFocusableInTouchMode(true);
         webView.setBackgroundColor(0);
@@ -119,14 +114,12 @@ public class BrowserActivity extends AbstractWalletActivity {
                 customView = view;
                 customViewCallback = callback;
                 originalSystemUiVisibility = getWindow().getDecorView().getSystemUiVisibility();
-
                 if (getActionBar() != null) getActionBar().hide();
                 getWindow().getDecorView().setSystemUiVisibility(
                     View.SYSTEM_UI_FLAG_FULLSCREEN |
                     View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
                     View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                 );
-
                 ((FrameLayout) rootLayout).addView(view);
             }
 
@@ -135,10 +128,8 @@ public class BrowserActivity extends AbstractWalletActivity {
                 if (customView == null) return;
                 ((FrameLayout) rootLayout).removeView(customView);
                 customView = null;
-
                 if (getActionBar() != null) getActionBar().show();
                 getWindow().getDecorView().setSystemUiVisibility(originalSystemUiVisibility);
-
                 customViewCallback.onCustomViewHidden();
                 customViewCallback = null;
             }
@@ -172,48 +163,56 @@ public class BrowserActivity extends AbstractWalletActivity {
         }
     }
 
-    private void updateThemeColors() {
+    // ==================================================
+    // ✅ CẬP NHẬT TẤT CẢ MÀU — BAO GỒM NỀN Ô URL — ĐỔI NGAY LẬP TỨC
+    // ==================================================
+    private void updateAllColors() {
+        // Lấy màu theo mẫu
         int bgActionBarColor = getResources().getColor(R.color.bg_action_bar);
         int fgIconColor = getResources().getColor(R.color.fg_on_dark_bg_network_significant);
 
-        if (toolbarContainer != null) toolbarContainer.setBackgroundColor(bgActionBarColor);
+        // === 1. Thanh công cụ ===
+        if (toolbarContainer != null) {
+            toolbarContainer.setBackgroundColor(bgActionBarColor);
+        }
+
+        // === 2. Icon nút ===
         if (btnBackWeb != null) btnBackWeb.setColorFilter(fgIconColor);
         if (btnForwardWeb != null) btnForwardWeb.setColorFilter(fgIconColor);
         if (btnGo != null) btnGo.setColorFilter(fgIconColor);
 
-        int[] textColorAttrs = { android.R.attr.textColorPrimary };
-        TypedArray ta = obtainStyledAttributes(textColorAttrs);
-        int textColor = ta.getColor(0, 0xFF000000);
-        ta.recycle();
-
-        int[] hintColorAttrs = { android.R.attr.textColorHint };
-        ta = obtainStyledAttributes(hintColorAttrs);
-        int hintColor = ta.getColor(0, 0xFF888888);
-        ta.recycle();
-
+        // === 3. Ô URL — ĐỔI NỀN + MÀU CHỮ NGAY ===
         if (urlBar != null) {
-            urlBar.setTextColor(textColor);
-            urlBar.setHintTextColor(hintColor);
+            // Lấy drawable nền từ theme (giống cách mẫu dùng @drawable/edittext_background)
+            Drawable urlBg = getResources().getDrawable(R.drawable.edittext_background);
+            urlBar.setBackground(urlBg);
+            
+            // Màu chữ theo theme
+            int textColor = getResources().getColor(android.R.color.primary_text_light);
+            // Hoặc dùng theme attr: textColorPrimary — lấy trực tiếp để đổi ngay
+            int styledTextColor = getTheme().obtainStyledAttributes(
+                new int[]{android.R.attr.textColorPrimary}).getColor(0, 0xFF000000);
+            urlBar.setTextColor(styledTextColor);
         }
 
-        int[] windowAttrs = { android.R.attr.windowBackground };
-        ta = obtainStyledAttributes(windowAttrs);
-        int bgColor = ta.getColor(0, 0xFFFFFFFF);
-        ta.recycle();
-
-        if (webView != null) webView.setBackgroundColor(bgColor);
+        // === 4. Nền WebView ===
+        int windowBg = getTheme().obtainStyledAttributes(
+            new int[]{android.R.attr.windowBackground}).getColor(0, 0xFFFFFFFF);
+        if (webView != null) webView.setBackgroundColor(windowBg);
     }
 
+    // ✅ Đổi cấu hình → cập nhật màu NGAY
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        updateThemeColors();
+        updateAllColors();
     }
 
+    // ✅ Quay lại màn hình → cập nhật màu NGAY
     @Override
     protected void onResume() {
         super.onResume();
-        updateThemeColors();
+        updateAllColors();
     }
 
     @Override
@@ -226,7 +225,6 @@ public class BrowserActivity extends AbstractWalletActivity {
         String input = urlBar.getText().toString().trim();
         hideKeyboard();
         if (input.isEmpty()) return;
-
         String finalUrl;
         if (isValidUrl(input)) {
             finalUrl = input.startsWith("http") ? input : "https://" + input;
