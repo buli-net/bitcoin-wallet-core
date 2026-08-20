@@ -179,15 +179,13 @@ public class BrowserActivity extends AbstractWalletActivity {
             }
         });
 
-        // ✅ 3. SỬA HÀNH ĐỘNG NÚT: Nhấn → làm mới trang hiện tại
         btnBackWeb.setOnClickListener(v -> { if (webView.canGoBack()) webView.goBack(); });
         btnForwardWeb.setOnClickListener(v -> { if (webView.canGoForward()) webView.goForward(); });
         btnRefreshWeb.setOnClickListener(v -> {
             hideKeyboard();
-            webView.reload(); // ✅ Làm mới trang đang mở
+            webView.reload();
         });
 
-        // ✅ GIỮ NGUYÊN: Nhập URL + Enter vẫn load link mới
         urlBar.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_GO ||
                 (event != null && event.getKeyCode() == android.view.KeyEvent.KEYCODE_ENTER
@@ -315,6 +313,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    // ===— LẤY THEO THUỘC TÍNH HỆ THỐNG ===
     private void updateAllColors() {
         int bgActionBarColor = getResources().getColor(R.color.bg_action_bar);
         int fgIconColor = getResources().getColor(R.color.fg_on_dark_bg_network_significant);
@@ -322,18 +321,20 @@ public class BrowserActivity extends AbstractWalletActivity {
         if (toolbarContainer != null) toolbarContainer.setBackgroundColor(bgActionBarColor);
         if (btnBackWeb != null) btnBackWeb.setColorFilter(fgIconColor);
         if (btnForwardWeb != null) btnForwardWeb.setColorFilter(fgIconColor);
-        if (btnRefreshWeb != null) btnRefreshWeb.setColorFilter(fgIconColor); // ✅ Cập nhật màu nút mới
+        if (btnRefreshWeb != null) btnRefreshWeb.setColorFilter(fgIconColor);
 
         if (urlBar != null) {
+            // Màu chữ: lấy theo thuộc tính theme, không ghi số cứng
             int[] textColorAttr = { android.R.attr.textColorPrimary };
             TypedArray taText = obtainStyledAttributes(textColorAttr);
-            int textColor = taText.getColor(0, 0xFF000000);
+            int textColor = taText.getColor(0, 0);
             taText.recycle();
             urlBar.setTextColor(textColor);
 
+            // Màu gợi ý: lấy theo thuộc tính theme
             int[] hintColorAttr = { android.R.attr.textColorHint };
             TypedArray taHint = obtainStyledAttributes(hintColorAttr);
-            int hintColor = taHint.getColor(0, 0xFF888888);
+            int hintColor = taHint.getColor(0, 0);
             taHint.recycle();
             urlBar.setHintTextColor(hintColor);
 
@@ -341,9 +342,10 @@ public class BrowserActivity extends AbstractWalletActivity {
             urlBar.setBackground(urlBg);
         }
 
+        // Màu nền WebView: lấy theo thuộc tính theme
         int[] windowBgAttr = { android.R.attr.windowBackground };
         TypedArray taBg = obtainStyledAttributes(windowBgAttr);
-        int windowBg = taBg.getColor(0, 0xFFFFFFFF);
+        int windowBg = taBg.getColor(0, 0);
         taBg.recycle();
         if (webView != null) webView.setBackgroundColor(windowBg);
     }
