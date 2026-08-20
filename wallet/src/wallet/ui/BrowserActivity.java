@@ -38,10 +38,14 @@ public class BrowserActivity extends AbstractWalletActivity {
     private WebChromeClient.CustomViewCallback customViewCallback;
     private int originalSystemUiVisibility;
 
-    // ========== LƯU TẠM TRẠNG THÁI — CHỈ DÙNG KHI BACK RA VÀO LẠI ==========
-    private static Bundle tempWebViewState = null;
-    private static String tempCurrentUrl = null;
-    private static boolean isFinishing = false; // Đánh dấu đang đóng hẳn
+    // ========== LƯU VĨNH VIỄN CHO BACK RA → VÀO LẠI ==========
+    // Chỉ bị xóa khi: có link mới HOẶC đóng app / xóa dữ liệu
+    private static Bundle savedState = null;
+    private static String savedUrl = null;
+    private static boolean hasSavedState = false;
+
+    // Cờ phân biệt
+    private boolean isNewIntentLink = false;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -97,7 +101,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         webView.setFocusableInTouchMode(true);
 
         // ==================================================
-        // FIX CHUNG — XỬ LÝ TẤT CẢ SCHEME KHÔNG PHẢI HTTP/HTTPS
+        // XỬ LÝ TẤT CẢ SCHEME KHÔNG PHẢI HTTP/HTTPS → MỞ BẰNG APP
         // ==================================================
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -128,6 +132,8 @@ public class BrowserActivity extends AbstractWalletActivity {
                 if (urlBar != null && !urlBar.getText().toString().equals(url)) {
                     urlBar.setText(url);
                 }
+                // Cập nhật URL mới nhất khi tải xong
+                savedUrl = url;
             }
         });
 
@@ -177,24 +183,26 @@ public class BrowserActivity extends AbstractWalletActivity {
         });
 
         // ==================================================
-        // ✅ PHÂN BIỆT: LINK MỚI vs KHÔI PHỤC TRẠNG THÁI CŨ
+        // ✅ PHÂN BIỆT: LINK MỚI vs KHÔI PHỤC TRẠNG THÁI
         // ==================================================
         Intent intent = getIntent();
         Uri intentData = intent.getData();
 
         if (intentData != null) {
-            // 🔴 CÓ LINK MỚI → LOAD LINK MỚI, XÓA TRẠNG THÁI CŨ
+            // 🔴 CÓ LINK MỚI → XÓA TRẠNG THÁI CŨ, LOAD LINK MỚI
             String newUrl = intentData.toString();
             urlBar.setText(newUrl);
             webView.loadUrl(newUrl);
-            clearTempState(); // ✅ Xóa trạng thái cũ — không bị đè!
-        } else if (tempWebViewState != null && !isFinishing) {
-            // ✅ KHÔNG CÓ LINK MỚI + CÓ TRẠNG THÁI TẠM → KHÔI PHỤC (back ra vào lại)
-            webView.restoreState(tempWebViewState);
-            if (tempCurrentUrl != null) urlBar.setText(tempCurrentUrl);
-            clearTempState(); // Dùng xong xóa
+            clearSavedState(); // ✅ Xóa trạng thái cũ
+            isNewIntentLink = true;
+        } else if (hasSavedState && savedState != null) {
+            // ✅ KHÔNG CÓ LINK MỚI → KHÔI PHỤC TRẠNG THÁI ĐÃ LƯU
+            webView.restoreState(savedState);
+            if (savedUrl != null) urlBar.setText(savedUrl);
+            isNewIntentLink = false;
+            // ⚠️ KHÔNG XÓA savedState → để dành lần sau mở lại
         } else if (savedInstanceState != null) {
-            // ✅ XOAY MÀN HÌNH / ĐỔI THEME → KHÔI PHỤC
+            // ✅ XOAY MÀN HÌNH / ĐỔI THEME → KHÔI PHỤC TẠM
             webView.restoreState(savedInstanceState);
             String restoredUrl = webView.getUrl();
             if (restoredUrl != null) urlBar.setText(restoredUrl);
@@ -202,7 +210,7 @@ public class BrowserActivity extends AbstractWalletActivity {
     }
 
     // ==================================================
-    // ✅ NHẬN LINK MỚI KHI ĐANG MỞ
+    // ✅ NHẬN LINK MỚI KHI ACTIVITY ĐANG MỞ
     // ==================================================
     @Override
     protected void onNewIntent(Intent intent) {
@@ -210,25 +218,27 @@ public class BrowserActivity extends AbstractWalletActivity {
         setIntent(intent);
         Uri data = intent.getData();
         if (data != null) {
+            // 🔴 LINK MỚI ĐẾN → XÓA TRẠNG THÁI CŨ, LOAD MỚI
             String newUrl = data.toString();
             urlBar.setText(newUrl);
             webView.loadUrl(newUrl);
-            clearTempState(); // ✅ Link mới → xóa trạng thái cũ
+            clearSavedState(); // ✅ Xóa trạng thái cũ
+            isNewIntentLink = true;
         }
     }
 
     // ==================================================
-    // ✅ LƯU TRẠNG THÁI TRƯỚC KHI TẠM DỪNG — BACK RA → VÀO LẠI KHÔNG RESET
+    // ✅ LƯU TRẠNG THÁI TRƯỚC KHI BỊ HỦY — QUAN TRỌNG NHẤT
     // ==================================================
     @Override
     protected void onPause() {
         super.onPause();
-        isFinishing = isFinishing(); // Kiểm tra có đóng hẳn không
-        if (webView != null && !isFinishing) {
-            // ✅ Chỉ lưu tạm khi tạm dừng (không đóng hẳn)
-            tempWebViewState = new Bundle();
-            webView.saveState(tempWebViewState);
-            tempCurrentUrl = webView.getUrl();
+        if (webView != null && !isFinishing()) {
+            // ✅ TẠM DỪNG → LƯU TRẠNG THÁI VÀO BIẾN STATIC
+            savedState = new Bundle();
+            webView.saveState(savedState);
+            savedUrl = webView.getUrl();
+            hasSavedState = true;
         }
         if (webView != null) webView.onPause();
     }
@@ -236,24 +246,29 @@ public class BrowserActivity extends AbstractWalletActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        isFinishing = false; // Reset cờ
         if (webView != null) webView.onResume();
         updateAllColors(); // ✅ Chỉ đổi màu, không đụng trang
     }
 
     // ==================================================
-    // ✅ ĐÓNG HẲN → XÓA HẾT TRẠNG THÁI TẠM
+    // ✅ CHỈ XÓA TRẠNG THÁI KHI CÓ LINK MỚI HOẶC ĐÓNG HẲN
     // ==================================================
-    @Override
-    public void finish() {
-        isFinishing = true;
-        clearTempState(); // ✅ Đóng hẳn → xóa trạng thái cũ
-        super.finish();
+    private void clearSavedState() {
+        savedState = null;
+        savedUrl = null;
+        hasSavedState = false;
     }
 
-    private void clearTempState() {
-        tempWebViewState = null;
-        tempCurrentUrl = null;
+    @Override
+    public void finish() {
+        // ✅ LƯU TRƯỚC KHI ĐÓNG — để lần mở lại vẫn có
+        if (webView != null) {
+            savedState = new Bundle();
+            webView.saveState(savedState);
+            savedUrl = webView.getUrl();
+            hasSavedState = true;
+        }
+        super.finish();
     }
 
     @Override
@@ -265,7 +280,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         if (webView.canGoBack()) {
             webView.goBack();
         } else {
-            super.onBackPressed();
+            super.onBackPressed(); // ✅ Gọi finish() → đã lưu trạng thái ở trên
         }
     }
 
@@ -275,7 +290,7 @@ public class BrowserActivity extends AbstractWalletActivity {
             if (customView != null && customViewCallback != null) {
                 customViewCallback.onCustomViewHidden();
             }
-            finish();
+            finish(); // ✅ Đã lưu trạng thái trong finish()
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -335,6 +350,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         }
         webView.loadUrl(finalUrl);
         urlBar.setText(finalUrl);
+        clearSavedState(); // ✅ Nhập URL mới → xóa trạng thái cũ
     }
 
     private boolean isValidUrl(String input) {
