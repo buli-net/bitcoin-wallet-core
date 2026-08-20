@@ -38,9 +38,10 @@ public class BrowserActivity extends AbstractWalletActivity {
     private WebChromeClient.CustomViewCallback customViewCallback;
     private int originalSystemUiVisibility;
 
-    // ✅ ĐÁNH DẤU: có link mới từ Intent hay không
-    private boolean hasNewIntent = false;
-    private String intentUrl = null;
+    // ========== LƯU TẠM TRẠNG THÁI — CHỈ DÙNG KHI BACK RA VÀO LẠI ==========
+    private static Bundle tempWebViewState = null;
+    private static String tempCurrentUrl = null;
+    private static boolean isFinishing = false; // Đánh dấu đang đóng hẳn
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -64,7 +65,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         updateAllColors();
 
         // ==================================================
-        // ✅ BẬT FULL HẾT TÍNH NĂNG WEB
+        // BẬT FULL HẾT TÍNH NĂNG WEB
         // ==================================================
         WebSettings webSettings = webView.getSettings();
         webSettings.setJavaScriptEnabled(true);
@@ -96,7 +97,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         webView.setFocusableInTouchMode(true);
 
         // ==================================================
-        // ✅ FIX CHUNG — XỬ LÝ TẤT CẢ SCHEME KHÔNG PHẢI HTTP/HTTPS
+        // FIX CHUNG — XỬ LÝ TẤT CẢ SCHEME KHÔNG PHẢI HTTP/HTTPS
         // ==================================================
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -176,73 +177,83 @@ public class BrowserActivity extends AbstractWalletActivity {
         });
 
         // ==================================================
-        // ✅ FIX CHÍNH — KHI CÓ LINK MỚI TỪ GIAO DỊCH → LOAD LINK MỚI, BỎ TRẠNG THÁI CŨ
+        // ✅ PHÂN BIỆT: LINK MỚI vs KHÔI PHỤC TRẠNG THÁI CŨ
         // ==================================================
         Intent intent = getIntent();
-        intentUrl = null;
-        hasNewIntent = false;
+        Uri intentData = intent.getData();
 
-        if (intent != null && intent.getData() != null) {
-            intentUrl = intent.getData().toString();
-            hasNewIntent = true; // ✅ Đánh dấu có link mới
-        }
-
-        if (hasNewIntent) {
-            // 🔴 CÓ LINK MỚI → BỎ TRẠNG THÁI CŨ, LOAD LINK MỚI
-            urlBar.setText(intentUrl);
-            webView.loadUrl(intentUrl);
+        if (intentData != null) {
+            // 🔴 CÓ LINK MỚI → LOAD LINK MỚI, XÓA TRẠNG THÁI CŨ
+            String newUrl = intentData.toString();
+            urlBar.setText(newUrl);
+            webView.loadUrl(newUrl);
+            clearTempState(); // ✅ Xóa trạng thái cũ — không bị đè!
+        } else if (tempWebViewState != null && !isFinishing) {
+            // ✅ KHÔNG CÓ LINK MỚI + CÓ TRẠNG THÁI TẠM → KHÔI PHỤC (back ra vào lại)
+            webView.restoreState(tempWebViewState);
+            if (tempCurrentUrl != null) urlBar.setText(tempCurrentUrl);
+            clearTempState(); // Dùng xong xóa
         } else if (savedInstanceState != null) {
-            // ✅ KHÔNG CÓ LINK MỚI → KHÔI PHỤC TRẠNG THÁI (xoay màn hình, đổi theme...)
+            // ✅ XOAY MÀN HÌNH / ĐỔI THEME → KHÔI PHỤC
             webView.restoreState(savedInstanceState);
             String restoredUrl = webView.getUrl();
             if (restoredUrl != null) urlBar.setText(restoredUrl);
         }
-        // Lần đầu mở, không có link → không load gì
     }
 
     // ==================================================
-    // ✅ NHẬN LINK MỚI KHI ACTIVITY ĐANG MỞ (nhấn giao dịch khác)
+    // ✅ NHẬN LINK MỚI KHI ĐANG MỞ
     // ==================================================
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        setIntent(intent); // ✅ Cập nhật intent mới
-
-        if (intent != null && intent.getData() != null) {
-            String newUrl = intent.getData().toString();
-            intentUrl = newUrl;
-            hasNewIntent = true;
-
-            // ✅ Load link mới ngay lập tức, không đè trang cũ
+        setIntent(intent);
+        Uri data = intent.getData();
+        if (data != null) {
+            String newUrl = data.toString();
             urlBar.setText(newUrl);
             webView.loadUrl(newUrl);
+            clearTempState(); // ✅ Link mới → xóa trạng thái cũ
         }
     }
 
     // ==================================================
-    // ✅ LƯU TRẠNG THÁI CHUẨN — KHÔNG DÙNG STATIC
+    // ✅ LƯU TRẠNG THÁI TRƯỚC KHI TẠM DỪNG — BACK RA → VÀO LẠI KHÔNG RESET
     // ==================================================
     @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        if (webView != null) {
-            webView.saveState(outState); // ✅ Lưu cho xoay màn hình, đổi theme
-        }
-    }
-
-    @Override
-    public void onPause() {
+    protected void onPause() {
         super.onPause();
-        if (webView != null) {
-            webView.onPause();
+        isFinishing = isFinishing(); // Kiểm tra có đóng hẳn không
+        if (webView != null && !isFinishing) {
+            // ✅ Chỉ lưu tạm khi tạm dừng (không đóng hẳn)
+            tempWebViewState = new Bundle();
+            webView.saveState(tempWebViewState);
+            tempCurrentUrl = webView.getUrl();
         }
+        if (webView != null) webView.onPause();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        isFinishing = false; // Reset cờ
         if (webView != null) webView.onResume();
-        updateAllColors(); // ✅ Chỉ cập nhật màu, không đụng link
+        updateAllColors(); // ✅ Chỉ đổi màu, không đụng trang
+    }
+
+    // ==================================================
+    // ✅ ĐÓNG HẲN → XÓA HẾT TRẠNG THÁI TẠM
+    // ==================================================
+    @Override
+    public void finish() {
+        isFinishing = true;
+        clearTempState(); // ✅ Đóng hẳn → xóa trạng thái cũ
+        super.finish();
+    }
+
+    private void clearTempState() {
+        tempWebViewState = null;
+        tempCurrentUrl = null;
     }
 
     @Override
@@ -340,6 +351,12 @@ public class BrowserActivity extends AbstractWalletActivity {
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(urlBar.getWindowToken(), 0);
         urlBar.clearFocus();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (webView != null) webView.saveState(outState);
     }
 
     @Override
