@@ -220,19 +220,21 @@
         
   <!-- Web Browser Activity -->
 
-<activity
-    android:name="wallet.ui.BrowserActivity"
-    android:label="@string/menu_web_browser"
-    android:theme="@style/My.Preference"
-    android:exported="false"
-    android:parentActivityName="wallet.ui.WalletActivity"
-    android:windowSoftInputMode="adjustResize"
-    android:configChanges="orientation|screenSize|keyboardHidden"
-    android:launchMode="singleTask"
-    android:alwaysRetainTaskState="true"
-    android:noHistory="false"
-    android:hardwareAccelerated="true"
-    android:process=":browser_process" />
+
+    <activity
+        android:name=".ui.BrowserActivity"
+        android:label="@string/menu_web_browser"
+        android:theme="@style/My.Preference"
+        android:exported="false"
+        android:parentActivityName=".ui.WalletActivity"
+        android:windowSoftInputMode="adjustResize"
+        android:configChanges="orientation|screenSize|keyboardHidden"
+        android:launchMode="singleInstance"
+        android:alwaysRetainTaskState="true"
+        android:noHistory="false"
+        android:hardwareAccelerated="true" />
+
+
 
 
 
