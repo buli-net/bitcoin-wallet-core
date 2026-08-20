@@ -38,10 +38,9 @@ public class BrowserActivity extends AbstractWalletActivity {
     private WebChromeClient.CustomViewCallback customViewCallback;
     private int originalSystemUiVisibility;
 
-    // ✅ Lưu trạng thái để không bị reset khi back ra vào lại
-    private static Bundle savedWebViewState = null;
-    private static String currentUrl = null;
-    private static boolean hasState = false;
+    // ✅ ĐÁNH DẤU: có link mới từ Intent hay không
+    private boolean hasNewIntent = false;
+    private String intentUrl = null;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -81,7 +80,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         webSettings.setBlockNetworkImage(false);
         webSettings.setBlockNetworkLoads(false);
         webSettings.setMediaPlaybackRequiresUserGesture(false);
-        webSettings.setMixedContentMode(2); // MIXED_CONTENT_ALWAYS_ALLOW
+        webSettings.setMixedContentMode(2);
         webSettings.setGeolocationEnabled(true);
         webSettings.setUseWideViewPort(true);
         webSettings.setLoadWithOverviewMode(true);
@@ -105,31 +104,26 @@ public class BrowserActivity extends AbstractWalletActivity {
                 String url = request.getUrl().toString();
                 String scheme = request.getUrl().getScheme();
 
-                // ✅ Nếu KHÔNG phải http/https → mở bằng ứng dụng hệ thống
                 if (scheme != null && !scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https")) {
                     try {
                         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
                         view.getContext().startActivity(intent);
                         urlBar.setText(url);
-                        return true; // ✅ Không load trong WebView, chuyển ra app
+                        return true;
                     } catch (Exception e) {
-                        // ❌ Không có ứng dụng xử lý → thông báo & không làm gì
                         urlBar.setText(url);
                         return true;
                     }
                 }
 
-                // ✅ http/https → load bình thường trong WebView
                 view.loadUrl(url);
                 urlBar.setText(url);
-                currentUrl = url;
                 return true;
             }
 
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                currentUrl = url;
                 if (urlBar != null && !urlBar.getText().toString().equals(url)) {
                     urlBar.setText(url);
                 }
@@ -167,7 +161,6 @@ public class BrowserActivity extends AbstractWalletActivity {
             }
         });
 
-        // Nút bấm
         btnBackWeb.setOnClickListener(v -> { if (webView.canGoBack()) webView.goBack(); });
         btnForwardWeb.setOnClickListener(v -> { if (webView.canGoForward()) webView.goForward(); });
         btnGo.setOnClickListener(v -> handleUrlInput());
@@ -183,40 +176,65 @@ public class BrowserActivity extends AbstractWalletActivity {
         });
 
         // ==================================================
-        // ✅ KHÔI PHỤC TRẠNG THÁI — KHÔNG BỊ RESET
+        // ✅ FIX CHÍNH — KHI CÓ LINK MỚI TỪ GIAO DỊCH → LOAD LINK MỚI, BỎ TRẠNG THÁI CŨ
         // ==================================================
-        if (hasState && savedWebViewState != null) {
-            webView.restoreState(savedWebViewState);
-            if (currentUrl != null) urlBar.setText(currentUrl);
-            hasState = false;
-            savedWebViewState = null;
+        Intent intent = getIntent();
+        intentUrl = null;
+        hasNewIntent = false;
+
+        if (intent != null && intent.getData() != null) {
+            intentUrl = intent.getData().toString();
+            hasNewIntent = true; // ✅ Đánh dấu có link mới
+        }
+
+        if (hasNewIntent) {
+            // 🔴 CÓ LINK MỚI → BỎ TRẠNG THÁI CŨ, LOAD LINK MỚI
+            urlBar.setText(intentUrl);
+            webView.loadUrl(intentUrl);
         } else if (savedInstanceState != null) {
+            // ✅ KHÔNG CÓ LINK MỚI → KHÔI PHỤC TRẠNG THÁI (xoay màn hình, đổi theme...)
             webView.restoreState(savedInstanceState);
-            String url = webView.getUrl();
-            if (url != null) urlBar.setText(url);
-        } else {
-            Intent intent = getIntent();
-            if (intent.getData() != null) {
-                String url = intent.getData().toString();
-                urlBar.setText(url);
-                webView.loadUrl(url);
-                currentUrl = url;
-            }
+            String restoredUrl = webView.getUrl();
+            if (restoredUrl != null) urlBar.setText(restoredUrl);
+        }
+        // Lần đầu mở, không có link → không load gì
+    }
+
+    // ==================================================
+    // ✅ NHẬN LINK MỚI KHI ACTIVITY ĐANG MỞ (nhấn giao dịch khác)
+    // ==================================================
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent); // ✅ Cập nhật intent mới
+
+        if (intent != null && intent.getData() != null) {
+            String newUrl = intent.getData().toString();
+            intentUrl = newUrl;
+            hasNewIntent = true;
+
+            // ✅ Load link mới ngay lập tức, không đè trang cũ
+            urlBar.setText(newUrl);
+            webView.loadUrl(newUrl);
         }
     }
 
     // ==================================================
-    // ✅ LƯU TRẠNG THÁI TRƯỚC KHI ĐÓNG — KHÔNG BỊ RESET
+    // ✅ LƯU TRẠNG THÁI CHUẨN — KHÔNG DÙNG STATIC
     // ==================================================
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (webView != null) {
+            webView.saveState(outState); // ✅ Lưu cho xoay màn hình, đổi theme
+        }
+    }
+
     @Override
     public void onPause() {
         super.onPause();
         if (webView != null) {
             webView.onPause();
-            savedWebViewState = new Bundle();
-            webView.saveState(savedWebViewState);
-            hasState = true;
-            currentUrl = webView.getUrl();
         }
     }
 
@@ -224,7 +242,7 @@ public class BrowserActivity extends AbstractWalletActivity {
     protected void onResume() {
         super.onResume();
         if (webView != null) webView.onResume();
-        updateAllColors();
+        updateAllColors(); // ✅ Chỉ cập nhật màu, không đụng link
     }
 
     @Override
@@ -306,7 +324,6 @@ public class BrowserActivity extends AbstractWalletActivity {
         }
         webView.loadUrl(finalUrl);
         urlBar.setText(finalUrl);
-        currentUrl = finalUrl;
     }
 
     private boolean isValidUrl(String input) {
@@ -323,12 +340,6 @@ public class BrowserActivity extends AbstractWalletActivity {
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(urlBar.getWindowToken(), 0);
         urlBar.clearFocus();
-    }
-
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        if (webView != null) webView.saveState(outState);
     }
 
     @Override
