@@ -30,7 +30,7 @@ public class BrowserActivity extends AbstractWalletActivity {
     private WebView webView;
     private ImageView btnBackWeb;
     private ImageView btnForwardWeb;
-    private ImageView btnGo;
+    private ImageView btnRefreshWeb; // ✅ 1. Đổi tên biến từ btnGo → btnRefreshWeb
     private LinearLayout toolbarContainer;
     private View rootLayout;
 
@@ -63,7 +63,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         webView = findViewById(R.id.webview);
         btnBackWeb = findViewById(R.id.btn_back_web);
         btnForwardWeb = findViewById(R.id.btn_forward_web);
-        btnGo = findViewById(R.id.btn_go);
+        btnRefreshWeb = findViewById(R.id.btn_refresh_web); // ✅ 2. Gán id mới khớp XML
 
         updateAllColors();
 
@@ -179,10 +179,15 @@ public class BrowserActivity extends AbstractWalletActivity {
             }
         });
 
+        // ✅ 3. SỬA HÀNH ĐỘNG NÚT: Nhấn → làm mới trang hiện tại
         btnBackWeb.setOnClickListener(v -> { if (webView.canGoBack()) webView.goBack(); });
         btnForwardWeb.setOnClickListener(v -> { if (webView.canGoForward()) webView.goForward(); });
-        btnGo.setOnClickListener(v -> handleUrlInput());
+        btnRefreshWeb.setOnClickListener(v -> {
+            hideKeyboard();
+            webView.reload(); // ✅ Làm mới trang đang mở
+        });
 
+        // ✅ GIỮ NGUYÊN: Nhập URL + Enter vẫn load link mới
         urlBar.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_GO ||
                 (event != null && event.getKeyCode() == android.view.KeyEvent.KEYCODE_ENTER
@@ -317,7 +322,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         if (toolbarContainer != null) toolbarContainer.setBackgroundColor(bgActionBarColor);
         if (btnBackWeb != null) btnBackWeb.setColorFilter(fgIconColor);
         if (btnForwardWeb != null) btnForwardWeb.setColorFilter(fgIconColor);
-        if (btnGo != null) btnGo.setColorFilter(fgIconColor);
+        if (btnRefreshWeb != null) btnRefreshWeb.setColorFilter(fgIconColor); // ✅ Cập nhật màu nút mới
 
         if (urlBar != null) {
             int[] textColorAttr = { android.R.attr.textColorPrimary };
