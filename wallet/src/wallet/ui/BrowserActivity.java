@@ -235,7 +235,7 @@ public class BrowserActivity extends AbstractWalletActivity {
     // === MENU ===
     @Override
     public boolean onCreateOptionsMenu(final android.view.Menu menu) {
-        getMenuInflater().inflate(R.menu.browser_menu, menu);
+        getMenuInflater().inflate(R.menu.browser_options, menu);
         return true;
     }
 
