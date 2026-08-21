@@ -9,9 +9,9 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
-import android.view.inputmethod.EditorInfo;
-import android.view.inputmethod.InputMethodManager;
-import android.webkit.WebResourceRequest;
+import android.view.ViewGroup;
+import android.widget.TextView;
+import android.widget.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebChromeClient;
@@ -22,6 +22,7 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
+import java.util.ArrayList;
 import wallet.R;
 
 import java.net.URI;
@@ -39,7 +40,6 @@ public class BrowserActivity extends AbstractWalletActivity {
     private LinearLayout toolbarContainer;
     private View rootLayout;
 
-    // === KHÔNG KHAI BÁO 3 NÚT Ở LAYOUT NỮA → CHUYỂN VÀO MENU ===
     private static final String PREFS_NAME = "BrowserPrefs";
     private static final String KEY_HOME_URL = "home_url";
     private final List<String> historyList = new ArrayList<>();
@@ -48,7 +48,6 @@ public class BrowserActivity extends AbstractWalletActivity {
     private WebChromeClient.CustomViewCallback customViewCallback;
     private int originalSystemUiVisibility;
 
-    // === LƯU TRẠNG THÁI — GIỮ NGUYÊN 100% ===
     private static Bundle savedWebViewState = null;
     private static String savedUrlBeforePause = null;
     private static int scrollX = 0;
@@ -64,11 +63,11 @@ public class BrowserActivity extends AbstractWalletActivity {
         rootLayout = findViewById(android.R.id.content);
         toolbarContainer = findViewById(R.id.toolbar_container);
 
+        // === GIỮ NGUYÊN Y HỆ THỐNG NHƯ VÍ GIẤY ===
         if (getActionBar() != null) {
-            getActionBar().setDisplayHomeAsUpEnabled(true); // Nút <-- quay lại góc trái
+            getActionBar().setDisplayHomeAsUpEnabled(true);
         }
 
-        // === CHỈ ÁNH XẠ 3 NÚT ĐIỀU HƯỚNG DƯỚI → XÓA 3 NÚT CŨ Ở ĐÂY ===
         urlBar = findViewById(R.id.url_bar);
         webView = findViewById(R.id.webview);
         btnBackWeb = findViewById(R.id.btn_back_web);
@@ -109,7 +108,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         webView.setFocusable(true);
         webView.setFocusableInTouchMode(true);
 
-        // === XỬ LÝ LINK & LỊCH SỬ — GIỮ NGUYÊN ===
+        // === XỬ LÝ LINK — GIỮ NGUYÊN ===
         webView.setWebViewClient(new WebViewClient() {
             private boolean isRestoring = false;
 
@@ -162,7 +161,7 @@ public class BrowserActivity extends AbstractWalletActivity {
             }
         });
 
-        // === FULLSCREEN VIDEO YOUTUBE/TIKTOK — GIỮ NGUYÊN ===
+        // === FULLSCREEN VIDEO — GIỮ NGUYÊN ===
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onShowCustomView(View view, CustomViewCallback callback) {
@@ -194,7 +193,7 @@ public class BrowserActivity extends AbstractWalletActivity {
             }
         });
 
-        // === NÚT ĐIỀU HƯỚNG DƯỚI — GIỮ NGUYÊN ===
+        // === NÚT ĐIỀU HƯỞNG — GIỮ NGUYÊN ===
         btnBackWeb.setOnClickListener(v -> { if (webView.canGoBack()) webView.goBack(); });
         btnForwardWeb.setOnClickListener(v -> { if (webView.canGoForward()) webView.goForward(); });
         btnRefreshWeb.setOnClickListener(v -> {
@@ -202,9 +201,7 @@ public class BrowserActivity extends AbstractWalletActivity {
             webView.reload();
         });
 
-        // === XÓA 3 NÚT BẤM Ở ĐÂY → CHUYỂN VÀO MENU ===
-
-        // === NHẬP URL & NHẤN ENTER — GIỮ NGUYÊN ===
+        // === NHẬP URL — GIỮ NGUYÊN ===
         urlBar.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_GO ||
                 (event != null && event.getKeyCode() == android.view.KeyEvent.KEYCODE_ENTER
@@ -215,7 +212,7 @@ public class BrowserActivity extends AbstractWalletActivity {
             return false;
         });
 
-        // === KHÔNG MẤT TRẠNG THÁI WEB KHI MỞ LINK MỚI — GIỮ NGUYÊN ===
+        // === LƯU TRẠNG THÁI — GIỮ NGUYÊN ===
         Intent intent = getIntent();
         Uri intentData = intent.getData();
         if (intentData != null) {
@@ -236,34 +233,76 @@ public class BrowserActivity extends AbstractWalletActivity {
         }
     }
 
-    // === THÊM: MENU HỆ THỐNG GÓC TRÊN PHẢI — ĐÚNG VỊ TRÍ NHƯ TẠO VÍ GIẤY ===
+    // === MENU: ONCREATE + ONPREPARE ĐÚNG NHƯ VÍ GIẤY ===
     @Override
-    public boolean onCreateOptionsMenu(android.view.Menu menu) {
+    public boolean onCreateOptionsMenu(final android.view.Menu menu) {
         getMenuInflater().inflate(R.menu.browser_menu, menu);
         return true;
     }
 
+    // === ĐOẠN QUAN TRỌNG NHẤT — COPY Y HỆ VÍ GIẤY: ĐỔI MÀU MENU BÊN TRONG 3 CHẤM ===
     @Override
-    public boolean onOptionsItemSelected(android.view.MenuItem item) {
+    public boolean onPrepareOptionsMenu(android.view.Menu menu) {
+        final int networkSignificantColor = getResources().getColor(R.color.fg_on_dark_bg_network_significant);
+        final View decor = getWindow().getDecorView();
+        decor.post(() -> {
+            ArrayList<View> actionMenuViews = new ArrayList<>();
+            findViewsByClass(decor, "ActionMenuView", actionMenuViews);
+            for (View amv : actionMenuViews) {
+                if (!(amv instanceof ViewGroup)) continue;
+                ViewGroup vg = (ViewGroup) amv;
+                for (int i = 0; i < vg.getChildCount(); i++) {
+                    View itemView = vg.getChildAt(i);
+                    if (itemView.getClass().getSimpleName().contains("ActionMenuItemView")) {
+                        findAndSetTextColor(itemView, networkSignificantColor);
+                    }
+                }
+            }
+        });
+        return super.onPrepareOptionsMenu(menu);
+    }
+
+    // === HÀM HỖ TRỢ ĐỔI MÀU — Y HỆ VÍ GIẤY ===
+    private void findAndSetTextColor(View root, int color) {
+        if (root instanceof TextView) {
+            ((TextView) root).setTextColor(color);
+            return;
+        }
+        if (root instanceof ViewGroup) {
+            ViewGroup vg = (ViewGroup) root;
+            for (int i = 0; i < vg.getChildCount(); i++) {
+                findAndSetTextColor(vg.getChildAt(i), color);
+            }
+        }
+    }
+
+    private void findViewsByClass(View root, String className, ArrayList<View> out) {
+        if (root.getClass().getSimpleName().contains(className)) {
+            out.add(root);
+        }
+        if (root instanceof ViewGroup) {
+            ViewGroup vg = (ViewGroup) root;
+            for (int i = 0; i < vg.getChildCount(); i++) {
+                findViewsByClass(vg.getChildAt(i), className, out);
+            }
+        }
+    }
+
+    // === XỬ LÝ CHỌN MENU — GIỮ NGUYÊN ===
+    @Override
+    public boolean onOptionsItemSelected(final android.view.MenuItem item) {
         int id = item.getItemId();
 
-        // === CHỨC NĂNG TRANG CHỦ ===
         if (id == R.id.menu_browser_home) {
             loadHomeUrl();
             return true;
-        }
-        // === CHỨC NĂNG LỊCH SỬ ===
-        else if (id == R.id.menu_browser_history) {
+        } else if (id == R.id.menu_browser_history) {
             showHistoryDialog();
             return true;
-        }
-        // === CHỨC NĂNG CÀI ĐẶT ===
-        else if (id == R.id.menu_browser_settings) {
+        } else if (id == R.id.menu_browser_settings) {
             showSetHomeDialog();
             return true;
-        }
-        // === NÚT <-- QUAY LẠI VÍ CHÍNH — GIỮ NGUYÊN LOGIC LƯU TRẠNG THÁI ===
-        else if (id == android.R.id.home) {
+        } else if (id == android.R.id.home) {
             if (webView != null && !isFinishing()) {
                 savedWebViewState = new Bundle();
                 webView.saveState(savedWebViewState);
@@ -278,11 +317,10 @@ public class BrowserActivity extends AbstractWalletActivity {
             finish();
             return true;
         }
-
         return super.onOptionsItemSelected(item);
     }
 
-    // === LƯU TRẠNG THÁI — GIỮ NGUYÊN ===
+    // === LƯU/TRẠNG THÁI — GIỮ NGUYÊN ===
     @Override
     protected void onPause() {
         if (webView != null && !isFinishing()) {
@@ -299,7 +337,8 @@ public class BrowserActivity extends AbstractWalletActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        updateAllColors(); // Đổi màu ngay khi đổi sáng/tối
+        updateAllColors();
+        invalidateOptionsMenu(); // ⚠️ BẮT BUỘC: buộc chạy lại onPrepareOptionsMenu → đổi màu ngay khi đổi theme
     }
 
     @Override
@@ -338,7 +377,6 @@ public class BrowserActivity extends AbstractWalletActivity {
         super.finish();
     }
 
-    // === NÚT BACK: QUAY LẠI TRANG WEB, KHÔNG MẤT TRẠNG THÁI — GIỮ NGUYÊN ===
     @Override
     public void onBackPressed() {
         if (customView != null && customViewCallback != null) {
@@ -360,7 +398,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         }
     }
 
-    // === ĐỔI MÀU NGAY LẬP TỨC THEO THEME — KHÔNG FIX CỨNG ===
+    // === ĐỔI MÀU THEO THEME — KHÔNG FIX CỨNG ===
     private void updateAllColors() {
         int bgActionBarColor = getResources().getColor(R.color.bg_action_bar);
         int fgIconColor = getResources().getColor(R.color.fg_on_dark_bg_network_significant);
@@ -369,7 +407,6 @@ public class BrowserActivity extends AbstractWalletActivity {
         if (btnBackWeb != null) btnBackWeb.setColorFilter(fgIconColor);
         if (btnForwardWeb != null) btnForwardWeb.setColorFilter(fgIconColor);
         if (btnRefreshWeb != null) btnRefreshWeb.setColorFilter(fgIconColor);
-        // === XÓA MÀU CHO 3 NÚT KHÔNG CÒN Ở LAYOUT ===
 
         if (urlBar != null) {
             int[] textColorAttr = { android.R.attr.textColorPrimary };
@@ -399,9 +436,10 @@ public class BrowserActivity extends AbstractWalletActivity {
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         updateAllColors();
+        invalidateOptionsMenu(); // ⚠️ ĐỔI MÀU MENU NGAY KHI XOAY/ĐỔI THEME
     }
 
-    // === XỬ LÝ NHẬP URL — GIỮ NGUYÊN ===
+    // === XỬ LÝ URL — GIỮ NGUYÊN ===
     private void handleUrlInput() {
         String input = urlBar.getText().toString().trim();
         hideKeyboard();
@@ -444,22 +482,19 @@ public class BrowserActivity extends AbstractWalletActivity {
         super.onDestroy();
     }
 
-    // === HÀM TRANG CHỦ: KHÔNG CỐ ĐỊNH GOOGLE → TRANG TRẮNG KHI CHƯA LƯU ===
+    // === TRANG CHỦ / LỊCH SỬ / CÀI ĐẶT — GIỮ NGUYÊN ===
     private void loadHomeUrl() {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         String homeUrl = prefs.getString(KEY_HOME_URL, null);
-
         if (homeUrl != null) {
             webView.loadUrl(homeUrl);
             urlBar.setText(homeUrl);
         } else {
-            // Chưa cài đặt → TRANG TRẮNG, ô URL trống
             webView.loadUrl("about:blank");
             urlBar.setText("");
         }
     }
 
-    // === LỊCH SỬ DUYỆT ===
     private void showHistoryDialog() {
         if (historyList.isEmpty()) {
             new AlertDialog.Builder(this)
@@ -468,7 +503,6 @@ public class BrowserActivity extends AbstractWalletActivity {
                 .show();
             return;
         }
-
         CharSequence[] items = historyList.toArray(new CharSequence[0]);
         new AlertDialog.Builder(this)
             .setTitle(R.string.browser_history_title)
@@ -485,16 +519,12 @@ public class BrowserActivity extends AbstractWalletActivity {
             .show();
     }
 
-    // === CÀI ĐẶT TRANG CHỦ: XÓA ĐƯỢC VỀ TRẮNG ===
     private void showSetHomeDialog() {
         EditText input = new EditText(this);
         input.setHint(R.string.browser_home_hint);
-
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         String currentHome = prefs.getString(KEY_HOME_URL, null);
-        if (currentHome != null) {
-            input.setText(currentHome);
-        }
+        if (currentHome != null) input.setText(currentHome);
 
         new AlertDialog.Builder(this)
             .setTitle(R.string.browser_set_home_title)
@@ -502,9 +532,7 @@ public class BrowserActivity extends AbstractWalletActivity {
             .setPositiveButton(R.string.browser_save, (dialog, which) -> {
                 String url = input.getText().toString().trim();
                 SharedPreferences.Editor edit = prefs.edit();
-
                 if (url.isEmpty()) {
-                    // Xóa trang chủ → về trang trắng
                     edit.remove(KEY_HOME_URL);
                     Toast.makeText(this, R.string.browser_home_cleared, Toast.LENGTH_SHORT).show();
                 } else {
