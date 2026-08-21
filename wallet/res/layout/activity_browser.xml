@@ -6,6 +6,55 @@
     android:orientation="vertical"
     android:background="?android:attr/windowBackground">
 
+    <!-- HÀNG 1: Tiêu đề + 3 nút Home/Lịch sử/Cài đặt -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:gravity="center_vertical"
+        android:background="@color/bg_action_bar">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/menu_web_browser"
+            android:textColor="@color/fg_on_dark_bg_network_significant"
+            android:textSize="20sp"
+            android:maxLines="2"
+            android:ellipsize="end"/>
+
+        <ImageView
+            android:id="@+id/btn_home"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_home_24dp"
+            android:tint="@color/fg_on_dark_bg_network_significant"
+            android:layout_marginStart="4dp"
+            android:background="?android:attr/selectableItemBackground"/>
+
+        <ImageView
+            android:id="@+id/btn_history"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_history_24dp"
+            android:tint="@color/fg_on_dark_bg_network_significant"
+            android:layout_marginStart="4dp"
+            android:background="?android:attr/selectableItemBackground"/>
+
+        <ImageView
+            android:id="@+id/btn_browser_settings"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_settings_24dp"
+            android:tint="@color/fg_on_dark_bg_network_significant"
+            android:layout_marginStart="4dp"
+            android:background="?android:attr/selectableItemBackground"/>
+
+    </LinearLayout>
+
+    <!-- HÀNG 2: Nút Lùi ← | Tiến → | Ô URL | Làm mới ⟳ -->
     <LinearLayout
         android:id="@+id/toolbar_container"
         android:layout_width="match_parent"
@@ -15,63 +64,13 @@
         android:gravity="center_vertical"
         android:background="@color/bg_action_bar">
 
-        <!-- Vùng tiêu đề + 3 icon Home/Lịch sử/Cài đặt -->
-<LinearLayout
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:gravity="center_vertical"
-    android:paddingHorizontal="8dp"
-    android:paddingVertical="4dp"
-    android:background="@color/bg_action_bar">
-
-    <TextView
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:text="@string/menu_web_browser"
-        android:textColor="@color/fg_on_dark_bg_network_significant"
-        android:textSize="20sp"
-        android:maxLines="2"
-        android:ellipsize="end"/>
-
-    <!-- Icon Home -->
-    <ImageView
-        android:id="@+id/btn_home"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:src="@drawable/ic_home_24dp"
-        android:tint="@color/fg_on_dark_bg_network_significant"
-        android:layout_marginStart="4dp"/>
-
-    <!-- Icon Lịch sử -->
-    <ImageView
-        android:id="@+id/btn_history"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:src="@drawable/ic_history_24dp"
-        android:tint="@color/fg_on_dark_bg_network_significant"
-        android:layout_marginStart="4dp"/>
-
-    <!-- Icon Cài đặt -->
-    <ImageView
-        android:id="@+id/btn_browser_settings"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:src="@drawable/ic_settings_24dp"
-        android:tint="@color/fg_on_dark_bg_network_significant"
-        android:layout_marginStart="4dp"/>
-
-</LinearLayout>
-
-
         <ImageView
             android:id="@+id/btn_back_web"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:src="@drawable/ic_back_24dp"
             android:tint="@color/fg_on_dark_bg_network_significant"
-            android:background="?android:attr/selectableItemBackground" />
+            android:background="?android:attr/selectableItemBackground"/>
 
         <ImageView
             android:id="@+id/btn_forward_web"
@@ -79,7 +78,7 @@
             android:layout_height="40dp"
             android:src="@drawable/ic_forward_24dp"
             android:tint="@color/fg_on_dark_bg_network_significant"
-            android:background="?android:attr/selectableItemBackground" />
+            android:background="?android:attr/selectableItemBackground"/>
 
         <EditText
             android:id="@+id/url_bar"
@@ -94,7 +93,7 @@
             android:textSize="14sp"
             android:padding="8dp"
             android:inputType="textUri"
-            android:imeOptions="actionGo" />
+            android:imeOptions="actionGo"/>
 
         <ImageView
             android:id="@+id/btn_refresh_web"
@@ -102,14 +101,15 @@
             android:layout_height="40dp"
             android:src="@drawable/ic_refresh_24dp"
             android:tint="@color/fg_on_dark_bg_network_significant"
-            android:background="?android:attr/selectableItemBackground" />
+            android:background="?android:attr/selectableItemBackground"/>
 
     </LinearLayout>
 
+    <!-- Nội dung WebView -->
     <WebView
         android:id="@+id/webview"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1"/>
 
 </LinearLayout>
