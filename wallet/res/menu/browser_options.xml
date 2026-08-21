@@ -21,6 +21,6 @@
         android:icon="@drawable/ic_settings_24dp"
         android:title="@string/browser_set_home_title"
         android:titleCondensed="@string/browser_set_home_title"
-        android:showAsAction="ifRoom|withText" />
+        android:showAsAction="never|withText" />
 
 </menu>
