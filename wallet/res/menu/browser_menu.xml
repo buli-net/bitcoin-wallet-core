@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- 3 chức năng: Trang chủ / Lịch sử / Cài đặt — ĐÚNG VỊ TRÍ GÓC TRÊN PHẢI -->
+    <!-- ✅ Hiển thị icon TRÊN THANH khi đủ chỗ → tự động gộp vào 3 chấm khi hẹp/màn ngang -->
     <item
         android:id="@+id/menu_browser_home"
         android:title="@string/browser_set_home_title"
         android:icon="@drawable/ic_home_24dp"
-        android:showAsAction="always|withText"/>
+        android:showAsAction="ifRoom|withText"/> <!-- ifRoom = TỰ ĐỘNG -->
 
     <item
         android:id="@+id/menu_browser_history"
@@ -18,6 +18,8 @@
         android:id="@+id/menu_browser_settings"
         android:title="@string/browser_set_home_title"
         android:icon="@drawable/ic_settings_24dp"
-        android:showAsAction="never|withText"/>
+        android:showAsAction="ifRoom|withText"/>
+
+    <!-- ✅ Khi hẹp/màn ngang → TẤT CẢ tự động lùi vào nút 3 chấm, không bị mất -->
 
 </menu>
