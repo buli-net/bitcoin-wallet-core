@@ -6,14 +6,14 @@
         android:icon="@drawable/ic_home_24dp"
         android:title="@string/browser_home_title"
         android:titleCondensed="@string/browser_home_title"
-        android:showAsAction="ifRoom" />
+        android:showAsAction="always|withText" />
 
     <item
         android:id="@+id/menu_browser_history"
         android:icon="@drawable/ic_history_24dp"
         android:title="@string/browser_history_title"
         android:titleCondensed="@string/browser_history_title"
-        android:showAsAction="ifRoom" />
+        android:showAsAction="ifRoom|withText" />
 
     <!-- Thằng này để never để ép hiện dấu 3 chấm như trang ví giấy -->
     <item
@@ -21,6 +21,6 @@
         android:icon="@drawable/ic_settings_24dp"
         android:title="@string/browser_set_home_title"
         android:titleCondensed="@string/browser_set_home_title"
-        android:showAsAction="never" />
+        android:showAsAction="ifRoom|withText" />
 
 </menu>
