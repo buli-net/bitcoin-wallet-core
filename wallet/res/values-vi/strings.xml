@@ -459,4 +459,18 @@
 <!-- Menu: Utilities & Web Browser -->
 <string name="menu_utilities">Tiện ích</string>
 <string name="menu_web_browser">Trình duyệt web</string>
+
+    <!-- Browser -->
+<string name="browser_no_history">Chưa có lịch sử duyệt web</string>
+<string name="browser_history_title">Lịch sử duyệt web</string>
+<string name="browser_clear_history">Xóa tất cả</string>
+<string name="browser_close">Đóng</string>
+<string name="browser_set_home_title">Cài đặt trang chủ</string>
+<string name="browser_home_hint">Nhập URL trang chủ (vd: google.com)</string>
+<string name="browser_save">Lưu</string>
+<string name="browser_cancel">Hủy</string>
+<string name="browser_home_saved">Đã lưu trang chủ</string>
+<string name="browser_home_cleared">Đã xóa trang chủ</string>
+<string name="browser_url_hint">URL...</string>
+
 </resources>
