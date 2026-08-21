@@ -222,7 +222,7 @@
 
 <activity
     android:name="wallet.ui.BrowserActivity"
-    android:configChanges="screenSize|keyboard|keyboardHidden"
+    android:configChanges="keyboard|keyboardHidden"
     android:exported="true"
     android:label="@string/menu_web_browser"
     android:theme="@style/My.Preference" />
