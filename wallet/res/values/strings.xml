@@ -477,4 +477,5 @@
 <string name="browser_cancel">Cancel</string>
 <string name="browser_home_saved">Home page saved</string>
 <string name="browser_home_cleared">Home page cleared</string>
+<string name="browser_settings_title">Settings</string>
 </resources>
