@@ -15,12 +15,12 @@
         android:titleCondensed="@string/browser_history_title"
         android:showAsAction="ifRoom|withText" />
 
-    <!-- NÚT CÀI ĐẶT - BẤM VÀO MỚI RA MENU CON -->
+    <!-- NÚT CÀI ĐẶT - DÙNG STRING CÓ SẴN, KHÔNG FIX CỨNG -->
     <item
         android:id="@+id/menu_browser_settings_root"
         android:icon="@drawable/ic_settings_24dp"
-        android:title="@string/action_settings"
-        android:titleCondensed="@string/action_settings"
+        android:title="@string/browser_settings_title"
+        android:titleCondensed="@string/browser_settings_title"
         android:showAsAction="ifRoom|withText">
         <menu>
             <item
@@ -29,7 +29,6 @@
             <item
                 android:id="@+id/menu_browser_clear_history"
                 android:title="@string/browser_clear_history" />
-            <!-- Sau này mày thêm tính năng mới ở đây -->
         </menu>
     </item>
 
