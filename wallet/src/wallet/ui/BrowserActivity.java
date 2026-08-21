@@ -10,8 +10,10 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
-import android.widget.webkit.WebResourceRequest;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
+// === ĐÚNG GÓI android.webkit KHÔNG CÓ android.widget.webkit ===
+import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebChromeClient;
@@ -21,14 +23,15 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 import java.util.ArrayList;
 import wallet.R;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.List;
+
 
 public class BrowserActivity extends AbstractWalletActivity {
 
