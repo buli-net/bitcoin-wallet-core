@@ -463,18 +463,18 @@
 
     <!-- Browser Activity -->
 
-
-        <string name="browser_home_title">Home</string>
-    <string name="browser_history_title">History</string>
-    <string name="browser_set_home_title">Set Home Page</string>
-    <string name="browser_no_history">No history</string>
-    <string name="browser_history_title_dialog">History</string>
-    <string name="browser_clear_history">Clear history</string>
-    <string name="browser_close">Close</string>
-    <string name="browser_set_home_title_dialog">Set home page</string>
-    <string name="browser_home_hint">https://...</string>
-    <string name="browser_save">Save</string>
-    <string name="browser_cancel">Cancel</string>
-    <string name="browser_home_saved">Home page saved</string>
-    <string name="browser_home_cleared">Home page cleared</string>
+<string name="browser_home_title">Home</string>
+<string name="browser_history_title">History</string>
+<string name="browser_set_home_title">Set home page</string>
+<string name="browser_url_hint">Search or enter URL</string>
+<string name="browser_no_history">No history</string>
+<string name="browser_history_title_dialog">Browser History</string>
+<string name="browser_clear_history">Clear</string>
+<string name="browser_close">Close</string>
+<string name="browser_set_home_title_dialog">Set home page</string>
+<string name="browser_home_hint">https://...</string>
+<string name="browser_save">Save</string>
+<string name="browser_cancel">Cancel</string>
+<string name="browser_home_saved">Home page saved</string>
+<string name="browser_home_cleared">Home page cleared</string>
 </resources>
