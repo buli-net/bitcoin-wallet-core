@@ -6,7 +6,7 @@
     android:orientation="vertical"
     android:background="?android:attr/windowBackground">
 
-    <!-- === THANH ĐIỀU HƯỚNG TRÌNH DUYỆT — Ở DƯỚI, GIỮ NGUYÊN === -->
+    <!-- === THANH ĐIỀU HƯỚNG — CHỈ GIỮ 3 NÚT + URL === -->
     <LinearLayout
         android:id="@+id/toolbar_container"
         android:layout_width="match_parent"
@@ -16,7 +16,6 @@
         android:gravity="center_vertical"
         android:background="@color/bg_action_bar">
 
-        <!-- Nút quay lại trang web -->
         <ImageView
             android:id="@+id/btn_back_web"
             android:layout_width="40dp"
@@ -24,7 +23,6 @@
             android:src="@drawable/ic_back_24dp"
             android:layout_marginEnd="8dp"/>
 
-        <!-- Nút tiến tới trang web -->
         <ImageView
             android:id="@+id/btn_forward_web"
             android:layout_width="40dp"
@@ -32,7 +30,6 @@
             android:src="@drawable/ic_forward_24dp"
             android:layout_marginEnd="12dp"/>
 
-        <!-- Ô nhập URL -->
         <EditText
             android:id="@+id/url_bar"
             android:layout_width="0dp"
@@ -42,7 +39,6 @@
             android:inputType="textUri"
             android:layout_marginEnd="8dp"/>
 
-        <!-- Nút làm mới trang -->
         <ImageView
             android:id="@+id/btn_refresh_web"
             android:layout_width="40dp"
@@ -51,7 +47,7 @@
 
     </LinearLayout>
 
-    <!-- === KHU VỰC HIỂN THỊ WEBVIEW === -->
+    <!-- === KHU VỰC WEBVIEW === -->
     <WebView
         android:id="@+id/webview"
         android:layout_width="match_parent"
