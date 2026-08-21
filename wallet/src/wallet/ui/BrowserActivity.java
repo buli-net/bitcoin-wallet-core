@@ -58,7 +58,7 @@ public class BrowserActivity extends AbstractWalletActivity {
     private ImageView btnRefreshWeb;
     private LinearLayout toolbarContainer;
     private View rootLayout;
-    private FrameLayout webViewContainer;
+    private ViewGroup webViewParent;
 
     private static final String PREFS_NAME = "BrowserPrefs";
     private static final String KEY_HOME_URL = "home_url";
@@ -67,6 +67,7 @@ public class BrowserActivity extends AbstractWalletActivity {
     private static class HistoryEntry {
         String url;
         long time;
+
         HistoryEntry(String url, long time) {
             this.url = url;
             this.time = time;
@@ -112,16 +113,9 @@ public class BrowserActivity extends AbstractWalletActivity {
         btnForwardWeb = findViewById(R.id.btn_forward_web);
         btnRefreshWeb = findViewById(R.id.btn_refresh_web);
 
-        webViewContainer = findViewById(R.id.webview_container);
-        if (webViewContainer == null) {
-            WebView temp = findViewById(R.id.webview);
-            if (temp!= null && temp.getParent() instanceof ViewGroup) {
-                webViewContainer = new FrameLayout(this);
-                ViewGroup parent = (ViewGroup) temp.getParent();
-                int index = parent.indexOfChild(temp);
-                parent.removeView(temp);
-                parent.addView(webViewContainer, index, temp.getLayoutParams());
-            }
+        WebView originalWebView = findViewById(R.id.webview);
+        if (originalWebView!= null) {
+            webViewParent = (ViewGroup) originalWebView.getParent();
         }
 
         if (WebViewHolder.webViewInstance!= null) {
@@ -130,25 +124,24 @@ public class BrowserActivity extends AbstractWalletActivity {
             if (oldParent!= null) {
                 oldParent.removeView(webView);
             }
-            if (webViewContainer!= null) {
-                webViewContainer.addView(webView, new FrameLayout.LayoutParams(
+            if (webViewParent!= null) {
+                webViewParent.addView(webView, new ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
                 ));
             }
             isReusingWebView = true;
         } else {
-            WebView newWebView = findViewById(R.id.webview);
-            if (newWebView == null) {
-                newWebView = new WebView(this);
-                if (webViewContainer!= null) {
-                    webViewContainer.addView(newWebView, new FrameLayout.LayoutParams(
+            webView = originalWebView;
+            if (webView == null) {
+                webView = new WebView(this);
+                if (webViewParent!= null) {
+                    webViewParent.addView(webView, new ViewGroup.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.MATCH_PARENT
                     ));
                 }
             }
-            webView = newWebView;
             WebViewHolder.webViewInstance = webView;
             isReusingWebView = false;
         }
@@ -162,8 +155,6 @@ public class BrowserActivity extends AbstractWalletActivity {
             webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
             webSettings.setDomStorageEnabled(true);
             webSettings.setDatabaseEnabled(true);
-            webSettings.setAppCacheEnabled(true);
-            webSettings.setAppCachePath(getApplicationContext().getCacheDir().getAbsolutePath());
             webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
             webSettings.setAllowFileAccess(true);
             webSettings.setAllowContentAccess(true);
@@ -182,7 +173,6 @@ public class BrowserActivity extends AbstractWalletActivity {
             webSettings.setDisplayZoomControls(false);
 
             webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-            webSettings.setRenderPriority(WebSettings.RenderPriority.HIGH);
             getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
             String ua = webSettings.getUserAgentString();
@@ -226,15 +216,6 @@ public class BrowserActivity extends AbstractWalletActivity {
                     view.loadUrl(url);
                     urlBar.setText(url);
                     return true;
-                }
-
-                @Override
-                public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                    super.onPageStarted(view, url, favicon);
-                    // Ensure previous page audio is stopped when new page starts
-                    if (isNewLink) {
-                        stopAllMediaPlayback();
-                    }
                 }
 
                 @Override
@@ -287,8 +268,8 @@ public class BrowserActivity extends AbstractWalletActivity {
 
                     getWindow().getDecorView().setSystemUiVisibility(
                             View.SYSTEM_UI_FLAG_FULLSCREEN |
-                            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-                            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
                     );
 
                     ((FrameLayout) rootLayout).addView(view);
@@ -341,7 +322,6 @@ public class BrowserActivity extends AbstractWalletActivity {
             @Override
             public void onClick(View v) {
                 if (webView.canGoForward()) {
-                    stopAllMediaPlayback();
                     webView.goForward();
                 }
             }
@@ -351,7 +331,6 @@ public class BrowserActivity extends AbstractWalletActivity {
             @Override
             public void onClick(View v) {
                 hideKeyboard();
-                stopAllMediaPlayback();
                 webView.reload();
             }
         });
@@ -422,8 +401,8 @@ public class BrowserActivity extends AbstractWalletActivity {
         }
         try {
             webView.evaluateJavascript(
-                "var m=document.querySelectorAll('audio,video');for(var i=0;i<m.length;i++){try{m[i].pause();m[i].src='';m[i].load();}catch(e){}}",
-                null
+                    "var m=document.querySelectorAll('audio,video');for(var i=0;i<m.length;i++){try{m[i].pause();m[i].src='';m[i].load();}catch(e){}}",
+                    null
             );
         } catch (Exception ignored) {
         }
@@ -582,7 +561,6 @@ public class BrowserActivity extends AbstractWalletActivity {
         int id = item.getItemId();
 
         if (id == R.id.menu_browser_home) {
-            stopAllMediaPlayback();
             loadHomeUrl();
             return true;
         } else if (id == R.id.menu_browser_history) {
@@ -678,8 +656,11 @@ public class BrowserActivity extends AbstractWalletActivity {
     @Override
     public void finish() {
         saveBrowserState();
-        if (webViewContainer!= null) {
-            webViewContainer.removeView(webView);
+        if (webViewParent!= null) {
+            try {
+                webViewParent.removeView(webView);
+            } catch (Exception ignored) {
+            }
         }
         super.finish();
     }
@@ -689,9 +670,9 @@ public class BrowserActivity extends AbstractWalletActivity {
         if (!isFinishing()) {
             saveBrowserState();
         }
-        if (webViewContainer!= null) {
+        if (webViewParent!= null) {
             try {
-                webViewContainer.removeView(webView);
+                webViewParent.removeView(webView);
             } catch (Exception ignored) {
             }
         }
@@ -764,8 +745,35 @@ public class BrowserActivity extends AbstractWalletActivity {
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
+
+        if (toolbarContainer!= null) {
+            ViewGroup.LayoutParams params = toolbarContainer.getLayoutParams();
+            params.width = ViewGroup.LayoutParams.MATCH_PARENT;
+            toolbarContainer.setLayoutParams(params);
+            toolbarContainer.requestLayout();
+        }
+
+        if (urlBar!= null) {
+            urlBar.requestLayout();
+        }
+
+        if (webViewParent!= null) {
+            webViewParent.requestLayout();
+        }
+
+        if (rootLayout!= null) {
+            rootLayout.requestLayout();
+        }
+
         updateAllColors();
         invalidateOptionsMenu();
+
+        getWindow().getDecorView().post(new Runnable() {
+            @Override
+            public void run() {
+                getWindow().getDecorView().requestLayout();
+            }
+        });
     }
 
     private void handleUrlInput() {
@@ -856,9 +864,9 @@ public class BrowserActivity extends AbstractWalletActivity {
     private void showHistoryDialog() {
         if (historyList.isEmpty()) {
             new AlertDialog.Builder(this)
-                  .setMessage(R.string.browser_no_history)
-                  .setPositiveButton(R.string.browser_close, null)
-                  .show();
+                   .setMessage(R.string.browser_no_history)
+                   .setPositiveButton(R.string.browser_close, null)
+                   .show();
             return;
         }
 
@@ -877,21 +885,21 @@ public class BrowserActivity extends AbstractWalletActivity {
         listView.setLayoutParams(params);
 
         final AlertDialog dialog = new AlertDialog.Builder(this)
-              .setTitle(R.string.browser_history_title)
-              .setView(listView)
-              .setPositiveButton(R.string.browser_close, null)
-              .setNegativeButton(R.string.browser_clear_history, new android.content.DialogInterface.OnClickListener() {
-                   @Override
-                   public void onClick(android.content.DialogInterface d, int which) {
-                       historyList.clear();
-                       SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                       SharedPreferences.Editor editor = prefs.edit();
-                       editor.remove(KEY_HISTORY);
-                       editor.apply();
-                       Toast.makeText(BrowserActivity.this, R.string.browser_clear_history, Toast.LENGTH_SHORT).show();
-                   }
-               })
-              .create();
+               .setTitle(R.string.browser_history_title)
+               .setView(listView)
+               .setPositiveButton(R.string.browser_close, null)
+               .setNegativeButton(R.string.browser_clear_history, new android.content.DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(android.content.DialogInterface d, int which) {
+                        historyList.clear();
+                        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                        SharedPreferences.Editor editor = prefs.edit();
+                        editor.remove(KEY_HISTORY);
+                        editor.apply();
+                        Toast.makeText(BrowserActivity.this, R.string.browser_clear_history, Toast.LENGTH_SHORT).show();
+                    }
+                })
+               .create();
 
         listView.setOnItemClickListener(new android.widget.AdapterView.OnItemClickListener() {
             @Override
@@ -1105,30 +1113,30 @@ public class BrowserActivity extends AbstractWalletActivity {
         }
 
         new AlertDialog.Builder(this)
-              .setTitle(R.string.browser_set_home_title)
-              .setView(input)
-              .setPositiveButton(R.string.browser_save, new android.content.DialogInterface.OnClickListener() {
-                   @Override
-                   public void onClick(android.content.DialogInterface dialog, int which) {
-                       String url = input.getText().toString().trim();
-                       SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                       SharedPreferences.Editor edit = prefs.edit();
+               .setTitle(R.string.browser_set_home_title)
+               .setView(input)
+               .setPositiveButton(R.string.browser_save, new android.content.DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(android.content.DialogInterface dialog, int which) {
+                        String url = input.getText().toString().trim();
+                        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                        SharedPreferences.Editor edit = prefs.edit();
 
-                       if (url.isEmpty()) {
-                           edit.remove(KEY_HOME_URL);
-                           Toast.makeText(BrowserActivity.this, R.string.browser_home_cleared, Toast.LENGTH_SHORT).show();
-                       } else {
-                           if (!url.startsWith("http")) {
-                               url = "https://" + url;
-                           }
-                           edit.putString(KEY_HOME_URL, url);
-                           Toast.makeText(BrowserActivity.this, R.string.browser_home_saved, Toast.LENGTH_SHORT).show();
-                       }
+                        if (url.isEmpty()) {
+                            edit.remove(KEY_HOME_URL);
+                            Toast.makeText(BrowserActivity.this, R.string.browser_home_cleared, Toast.LENGTH_SHORT).show();
+                        } else {
+                            if (!url.startsWith("http")) {
+                                url = "https://" + url;
+                            }
+                            edit.putString(KEY_HOME_URL, url);
+                            Toast.makeText(BrowserActivity.this, R.string.browser_home_saved, Toast.LENGTH_SHORT).show();
+                        }
 
-                       edit.apply();
-                   }
-               })
-              .setNegativeButton(R.string.browser_cancel, null)
-              .show();
+                        edit.apply();
+                    }
+                })
+               .setNegativeButton(R.string.browser_cancel, null)
+               .show();
     }
 }
