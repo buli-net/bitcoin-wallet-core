@@ -455,5 +455,8 @@
 <string name="paper_wallet_options_share">Chia sẻ</string>
 <string name="paper_wallet_options_print">In</string>
 <string name="paper_wallet_options_export">Xuất TXT</string>
-    
+
+<!-- Menu: Utilities & Web Browser -->
+<string name="menu_utilities">Tiện ích</string>
+<string name="menu_web_browser">Trình duyệt web</string>
 </resources>
