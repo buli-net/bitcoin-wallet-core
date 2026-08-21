@@ -1,20 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item
         android:id="@+id/menu_browser_home"
         android:icon="@drawable/ic_home_24dp"
         android:title="@string/browser_home_title"
         android:titleCondensed="@string/browser_home_title"
-        app:showAsAction="ifRoom" />
+        android:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/menu_browser_history"
         android:icon="@drawable/ic_history_24dp"
         android:title="@string/browser_history_title"
         android:titleCondensed="@string/browser_history_title"
-        app:showAsAction="ifRoom" />
+        android:showAsAction="ifRoom" />
 
     <!-- Thằng này để never để ép hiện dấu 3 chấm như trang ví giấy -->
     <item
@@ -22,6 +21,6 @@
         android:icon="@drawable/ic_settings_24dp"
         android:title="@string/browser_set_home_title"
         android:titleCondensed="@string/browser_set_home_title"
-        app:showAsAction="never" />
+        android:showAsAction="never" />
 
 </menu>
