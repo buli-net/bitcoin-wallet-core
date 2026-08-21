@@ -461,5 +461,18 @@
 <string name="menu_utilities">Utilities</string>
 <string name="menu_web_browser">Web Browser</string>
 
+    <!-- Browser Activity -->
+<string name="browser_no_history">No browsing history yet</string>
+<string name="browser_history_title">Browsing History</string>
+<string name="browser_clear_history">Clear All</string>
+<string name="browser_close">Close</string>
+<string name="browser_set_home_title">Set Homepage</string>
+<string name="browser_home_hint">Enter homepage URL (e.g. google.com)</string>
+<string name="browser_save">Save</string>
+<string name="browser_cancel">Cancel</string>
+<string name="browser_home_saved">Homepage saved</string>
+<string name="browser_home_cleared">Homepage cleared</string>
+<string name="browser_url_hint">Enter URL...</string>
+
 
 </resources>
