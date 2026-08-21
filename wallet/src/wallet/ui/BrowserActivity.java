@@ -26,10 +26,16 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 import wallet.R;
 
@@ -45,9 +51,19 @@ public class BrowserActivity extends AbstractWalletActivity {
 
     private static final String PREFS_NAME = "BrowserPrefs";
     private static final String KEY_HOME_URL = "home_url";
-    private static final String KEY_HISTORY = "history_list";
+    private static final String KEY_HISTORY = "history_list_json";
 
-    private final List<String> historyList = new ArrayList<>();
+    private static class HistoryEntry {
+        String url;
+        long time;
+
+        HistoryEntry(String url, long time) {
+            this.url = url;
+            this.time = time;
+        }
+    }
+
+    private final List<HistoryEntry> historyList = new ArrayList<>();
 
     private View customView;
     private WebChromeClient.CustomViewCallback customViewCallback;
@@ -80,16 +96,7 @@ public class BrowserActivity extends AbstractWalletActivity {
 
         updateAllColors();
 
-        SharedPreferences prefsLoad = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        String savedHistory = prefsLoad.getString(KEY_HISTORY, null);
-        if (savedHistory!= null &&!savedHistory.isEmpty()) {
-            String[] arr = savedHistory.split("\\|\\|");
-            for (String s : arr) {
-                if (!s.isEmpty()) {
-                    historyList.add(s);
-                }
-            }
-        }
+        loadHistoryFromPrefs();
 
         WebSettings webSettings = webView.getSettings();
         webSettings.setJavaScriptEnabled(true);
@@ -186,28 +193,6 @@ public class BrowserActivity extends AbstractWalletActivity {
                 }
 
                 saveHistory(url);
-            }
-
-            private void saveHistory(String url) {
-                if (url == null) {
-                    return;
-                }
-                if (url.equals("about:blank")) {
-                    return;
-                }
-                if (url.isEmpty()) {
-                    return;
-                }
-                if (historyList.contains(url)) {
-                    return;
-                }
-
-                historyList.add(url);
-
-                SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                SharedPreferences.Editor editor = prefs.edit();
-                editor.putString(KEY_HISTORY, String.join("||", historyList));
-                editor.apply();
             }
         });
 
@@ -335,6 +320,89 @@ public class BrowserActivity extends AbstractWalletActivity {
             if (restoredUrl!= null) {
                 urlBar.setText(restoredUrl);
             }
+        }
+    }
+
+    private void loadHistoryFromPrefs() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+
+        // thử đọc format mới JSON
+        String json = prefs.getString(KEY_HISTORY, null);
+        if (json!= null &&!json.isEmpty()) {
+            try {
+                if (json.trim().startsWith("[")) {
+                    JSONArray arr = new JSONArray(json);
+                    for (int i = 0; i < arr.length(); i++) {
+                        JSONObject o = arr.getJSONObject(i);
+                        String url = o.getString("url");
+                        long time = o.getLong("time");
+                        historyList.add(new HistoryEntry(url, time));
+                    }
+                    return;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
+        // fallback format cũ || của mày
+        String old = prefs.getString("history_list", null);
+        if (old!= null &&!old.isEmpty()) {
+            String[] arr = old.split("\\|\\|");
+            long now = System.currentTimeMillis();
+            for (String s : arr) {
+                if (!s.isEmpty()) {
+                    historyList.add(new HistoryEntry(s, now));
+                    now -= 1000;
+                }
+            }
+            saveHistoryToPrefs();
+            prefs.edit().remove("history_list").apply();
+        }
+    }
+
+    private void saveHistory(String url) {
+        if (url == null) {
+            return;
+        }
+        if (url.equals("about:blank")) {
+            return;
+        }
+        if (url.isEmpty()) {
+            return;
+        }
+
+        for (int i = 0; i < historyList.size(); i++) {
+            HistoryEntry e = historyList.get(i);
+            if (e.url.equals(url)) {
+                historyList.remove(i);
+                break;
+            }
+        }
+
+        HistoryEntry entry = new HistoryEntry(url, System.currentTimeMillis());
+        historyList.add(0, entry);
+
+        if (historyList.size() > 200) {
+            historyList.remove(historyList.size() - 1);
+        }
+
+        saveHistoryToPrefs();
+    }
+
+    private void saveHistoryToPrefs() {
+        try {
+            JSONArray arr = new JSONArray();
+            for (HistoryEntry e : historyList) {
+                JSONObject o = new JSONObject();
+                o.put("url", e.url);
+                o.put("time", e.time);
+                arr.put(o);
+            }
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putString(KEY_HISTORY, arr.toString());
+            editor.apply();
+        } catch (Exception ignored) {
         }
     }
 
@@ -651,12 +719,19 @@ public class BrowserActivity extends AbstractWalletActivity {
             return;
         }
 
-        CharSequence[] items = historyList.toArray(new CharSequence[0]);
+        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm dd/MM/yyyy", Locale.getDefault());
+        CharSequence[] items = new CharSequence[historyList.size()];
+
+        for (int i = 0; i < historyList.size(); i++) {
+            HistoryEntry entry = historyList.get(i);
+            String date = sdf.format(new Date(entry.time));
+            items[i] = date + " - " + entry.url;
+        }
 
         new AlertDialog.Builder(this)
                .setTitle(R.string.browser_history_title)
                .setItems(items, (dialog, which) -> {
-                    String url = historyList.get(which);
+                    String url = historyList.get(which).url;
                     webView.loadUrl(url);
                     urlBar.setText(url);
                 })
