@@ -401,12 +401,11 @@ public class BrowserActivity extends AbstractWalletActivity {
         }
         try {
             webView.evaluateJavascript(
-                    "var m=document.querySelectorAll('audio,video');for(var i=0;i<m.length;i++){try{m[i].pause();m[i].src='';m[i].load();}catch(e){}}",
+                    "try{var m=document.querySelectorAll('audio,video');for(var i=0;i<m.length;i++){m[i].pause();}}catch(e){}",
                     null
             );
         } catch (Exception ignored) {
         }
-        webView.stopLoading();
     }
 
     private void loadHistoryFromPrefs() {
