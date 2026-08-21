@@ -234,7 +234,9 @@ public class BrowserActivity extends AbstractWalletActivity {
                     }
 
                     isNewLink = false;
-                    WebViewHolder.lastUrl = url;
+                    if (url!= null &&!url.equals("about:blank") &&!url.isEmpty()) {
+                        WebViewHolder.lastUrl = url;
+                    }
                 }
 
                 @Override
@@ -293,11 +295,13 @@ public class BrowserActivity extends AbstractWalletActivity {
                 }
             });
         } else {
-            if (webView.getUrl()!= null) {
+            if (webView.getUrl()!= null &&!webView.getUrl().equals("about:blank")) {
                 urlBar.setText(webView.getUrl());
-            } else if (WebViewHolder.lastUrl!= null) {
+            } else if (WebViewHolder.lastUrl!= null &&!WebViewHolder.lastUrl.equals("about:blank")) {
                 urlBar.setText(WebViewHolder.lastUrl);
+                webView.loadUrl(WebViewHolder.lastUrl);
             }
+
             if (WebViewHolder.lastScrollX!= 0 || WebViewHolder.lastScrollY!= 0) {
                 webView.post(new Runnable() {
                     @Override
@@ -592,14 +596,17 @@ public class BrowserActivity extends AbstractWalletActivity {
 
     private void saveBrowserState() {
         if (webView!= null) {
-            WebViewHolder.lastUrl = webView.getUrl();
+            String curUrl = webView.getUrl();
+            if (curUrl!= null &&!curUrl.equals("about:blank") &&!curUrl.isEmpty()) {
+                WebViewHolder.lastUrl = curUrl;
+                savedUrlBeforePause = curUrl;
+            }
             WebViewHolder.lastScrollX = webView.getScrollX();
             WebViewHolder.lastScrollY = webView.getScrollY();
 
             if (!isFinishing()) {
                 savedWebViewState = new Bundle();
                 webView.saveState(savedWebViewState);
-                savedUrlBeforePause = webView.getUrl();
                 scrollX = webView.getScrollX();
                 scrollY = webView.getScrollY();
                 hasSavedState = true;
@@ -863,9 +870,9 @@ public class BrowserActivity extends AbstractWalletActivity {
     private void showHistoryDialog() {
         if (historyList.isEmpty()) {
             new AlertDialog.Builder(this)
-                   .setMessage(R.string.browser_no_history)
-                   .setPositiveButton(R.string.browser_close, null)
-                   .show();
+                  .setMessage(R.string.browser_no_history)
+                  .setPositiveButton(R.string.browser_close, null)
+                  .show();
             return;
         }
 
@@ -884,10 +891,10 @@ public class BrowserActivity extends AbstractWalletActivity {
         listView.setLayoutParams(params);
 
         final AlertDialog dialog = new AlertDialog.Builder(this)
-               .setTitle(R.string.browser_history_title)
-               .setView(listView)
-               .setPositiveButton(R.string.browser_close, null)
-               .setNegativeButton(R.string.browser_clear_history, new android.content.DialogInterface.OnClickListener() {
+              .setTitle(R.string.browser_history_title)
+              .setView(listView)
+              .setPositiveButton(R.string.browser_close, null)
+              .setNegativeButton(R.string.browser_clear_history, new android.content.DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(android.content.DialogInterface d, int which) {
                         historyList.clear();
@@ -898,7 +905,7 @@ public class BrowserActivity extends AbstractWalletActivity {
                         Toast.makeText(BrowserActivity.this, R.string.browser_clear_history, Toast.LENGTH_SHORT).show();
                     }
                 })
-               .create();
+              .create();
 
         listView.setOnItemClickListener(new android.widget.AdapterView.OnItemClickListener() {
             @Override
@@ -1112,9 +1119,9 @@ public class BrowserActivity extends AbstractWalletActivity {
         }
 
         new AlertDialog.Builder(this)
-               .setTitle(R.string.browser_set_home_title)
-               .setView(input)
-               .setPositiveButton(R.string.browser_save, new android.content.DialogInterface.OnClickListener() {
+              .setTitle(R.string.browser_set_home_title)
+              .setView(input)
+              .setPositiveButton(R.string.browser_save, new android.content.DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(android.content.DialogInterface dialog, int which) {
                         String url = input.getText().toString().trim();
@@ -1135,7 +1142,7 @@ public class BrowserActivity extends AbstractWalletActivity {
                         edit.apply();
                     }
                 })
-               .setNegativeButton(R.string.browser_cancel, null)
-               .show();
+              .setNegativeButton(R.string.browser_cancel, null)
+              .show();
     }
 }
