@@ -6,9 +6,12 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.content.res.TypedArray;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,23 +22,29 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.BaseAdapter;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.URI;
-import java.net.URISyntaxException;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import wallet.R;
 
@@ -64,6 +73,7 @@ public class BrowserActivity extends AbstractWalletActivity {
     }
 
     private final List<HistoryEntry> historyList = new ArrayList<>();
+    private final Map<String, Bitmap> faviconCache = new HashMap<>();
 
     private View customView;
     private WebChromeClient.CustomViewCallback customViewCallback;
@@ -95,7 +105,6 @@ public class BrowserActivity extends AbstractWalletActivity {
         btnRefreshWeb = findViewById(R.id.btn_refresh_web);
 
         updateAllColors();
-
         loadHistoryFromPrefs();
 
         WebSettings webSettings = webView.getSettings();
@@ -325,9 +334,8 @@ public class BrowserActivity extends AbstractWalletActivity {
 
     private void loadHistoryFromPrefs() {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-
-        // thử đọc format mới JSON
         String json = prefs.getString(KEY_HISTORY, null);
+
         if (json!= null &&!json.isEmpty()) {
             try {
                 if (json.trim().startsWith("[")) {
@@ -344,7 +352,6 @@ public class BrowserActivity extends AbstractWalletActivity {
             }
         }
 
-        // fallback format cũ || của mày
         String old = prefs.getString("history_list", null);
         if (old!= null &&!old.isEmpty()) {
             String[] arr = old.split("\\|\\|");
@@ -352,11 +359,13 @@ public class BrowserActivity extends AbstractWalletActivity {
             for (String s : arr) {
                 if (!s.isEmpty()) {
                     historyList.add(new HistoryEntry(s, now));
-                    now -= 1000;
+                    now = now - 1000;
                 }
             }
             saveHistoryToPrefs();
-            prefs.edit().remove("history_list").apply();
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.remove("history_list");
+            editor.apply();
         }
     }
 
@@ -519,12 +528,15 @@ public class BrowserActivity extends AbstractWalletActivity {
     @Override
     protected void onPause() {
         luuTrangThai();
+        webView.resumeTimers();
         super.onPause();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        webView.onResume();
+        webView.resumeTimers();
         updateAllColors();
         invalidateOptionsMenu();
     }
@@ -719,32 +731,234 @@ public class BrowserActivity extends AbstractWalletActivity {
             return;
         }
 
-        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm dd/MM/yyyy", Locale.getDefault());
-        CharSequence[] items = new CharSequence[historyList.size()];
+        ListView listView = new ListView(this);
+        listView.setFastScrollEnabled(true);
+        listView.setVerticalScrollBarEnabled(true);
 
-        for (int i = 0; i < historyList.size(); i++) {
-            HistoryEntry entry = historyList.get(i);
-            String date = sdf.format(new Date(entry.time));
-            items[i] = date + " - " + entry.url;
+        final HistoryAdapter adapter = new HistoryAdapter();
+        listView.setAdapter(adapter);
+
+        int height = (int) (getResources().getDisplayMetrics().heightPixels * 0.8);
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                height
+        );
+        listView.setLayoutParams(params);
+
+        final AlertDialog dialog = new AlertDialog.Builder(this)
+               .setTitle(R.string.browser_history_title)
+               .setView(listView)
+               .setPositiveButton(R.string.browser_close, null)
+               .setNegativeButton(R.string.browser_clear_history, new android.content.DialogInterface.OnClickListener() {
+                   @Override
+                   public void onClick(android.content.DialogInterface d, int which) {
+                       historyList.clear();
+                       SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                       SharedPreferences.Editor editor = prefs.edit();
+                       editor.remove(KEY_HISTORY);
+                       editor.apply();
+                       Toast.makeText(BrowserActivity.this, R.string.browser_clear_history, Toast.LENGTH_SHORT).show();
+                   }
+               })
+               .create();
+
+        listView.setOnItemClickListener(new android.widget.AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                String url = historyList.get(position).url;
+                webView.loadUrl(url);
+                urlBar.setText(url);
+                dialog.dismiss();
+            }
+        });
+
+        dialog.show();
+    }
+
+    private class HistoryAdapter extends BaseAdapter {
+
+        private SimpleDateFormat sdf;
+
+        HistoryAdapter() {
+            sdf = new SimpleDateFormat("HH:mm dd/MM/yyyy", Locale.getDefault());
         }
 
-        new AlertDialog.Builder(this)
-               .setTitle(R.string.browser_history_title)
-               .setItems(items, (dialog, which) -> {
-                    String url = historyList.get(which).url;
-                    webView.loadUrl(url);
-                    urlBar.setText(url);
-                })
-               .setPositiveButton(R.string.browser_clear_history, (dialog, which) -> {
-                    historyList.clear();
-                    SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                    SharedPreferences.Editor editor = prefs.edit();
-                    editor.remove(KEY_HISTORY);
-                    editor.apply();
-                    Toast.makeText(this, R.string.browser_clear_history, Toast.LENGTH_SHORT).show();
-                })
-               .setNegativeButton(R.string.browser_close, null)
-               .show();
+        @Override
+        public int getCount() {
+            return historyList.size();
+        }
+
+        @Override
+        public Object getItem(int position) {
+            return historyList.get(position);
+        }
+
+        @Override
+        public long getItemId(int position) {
+            return position;
+        }
+
+        @Override
+        public View getView(final int position, View convertView, ViewGroup parent) {
+            ViewHolder holder;
+
+            if (convertView == null) {
+                LinearLayout row = new LinearLayout(BrowserActivity.this);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setPadding(24, 24, 16, 24);
+                row.setGravity(Gravity.CENTER_VERTICAL);
+
+                ImageView iconFavicon = new ImageView(BrowserActivity.this);
+                LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(96, 96);
+                iconParams.setMargins(0, 0, 24, 0);
+                iconFavicon.setLayoutParams(iconParams);
+                iconFavicon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+
+                LinearLayout textCol = new LinearLayout(BrowserActivity.this);
+                textCol.setOrientation(LinearLayout.VERTICAL);
+                LinearLayout.LayoutParams textColParams = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+                textCol.setLayoutParams(textColParams);
+
+                TextView txtTitle = new TextView(BrowserActivity.this);
+                txtTitle.setTextSize(14);
+                txtTitle.setMaxLines(1);
+                txtTitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
+
+                TextView txtDomain = new TextView(BrowserActivity.this);
+                txtDomain.setTextSize(12);
+                txtDomain.setAlpha(0.7f);
+                txtDomain.setMaxLines(1);
+                txtDomain.setEllipsize(android.text.TextUtils.TruncateAt.END);
+
+                textCol.addView(txtTitle);
+                textCol.addView(txtDomain);
+
+                ImageView btnX = new ImageView(BrowserActivity.this);
+                LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(96, 96);
+                btnParams.setMargins(16, 0, 0, 0);
+                btnX.setLayoutParams(btnParams);
+                btnX.setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
+                btnX.setScaleType(ImageView.ScaleType.CENTER);
+                btnX.setPadding(24, 24, 24, 24);
+
+                row.addView(iconFavicon);
+                row.addView(textCol);
+                row.addView(btnX);
+
+                holder = new ViewHolder();
+                holder.icon = iconFavicon;
+                holder.title = txtTitle;
+                holder.domain = txtDomain;
+                holder.btnX = btnX;
+                row.setTag(holder);
+                convertView = row;
+            } else {
+                holder = (ViewHolder) convertView.getTag();
+            }
+
+            HistoryEntry entry = historyList.get(position);
+
+            String host = "";
+            try {
+                URI uri = new URI(entry.url);
+                host = uri.getHost();
+                if (host == null) {
+                    host = "";
+                }
+                if (host.startsWith("www.")) {
+                    host = host.substring(4);
+                }
+            } catch (Exception e) {
+                host = "";
+            }
+
+            String displayTitle = entry.url;
+            displayTitle = displayTitle.replace("https://", "");
+            displayTitle = displayTitle.replace("http://", "");
+            if (displayTitle.length() > 50) {
+                displayTitle = displayTitle.substring(0, 50) + "...";
+            }
+
+            holder.title.setText(displayTitle);
+            String date = sdf.format(new Date(entry.time));
+            holder.domain.setText(date + " • " + host);
+
+            holder.icon.setImageResource(android.R.drawable.sym_def_app_icon);
+
+            if (host!= null &&!host.isEmpty()) {
+                loadFaviconForAllWebs(host, holder.icon);
+            }
+
+            holder.btnX.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    historyList.remove(position);
+                    saveHistoryToPrefs();
+                    notifyDataSetChanged();
+                }
+            });
+
+            return convertView;
+        }
+
+        class ViewHolder {
+            ImageView icon;
+            TextView title;
+            TextView domain;
+            ImageView btnX;
+        }
+
+        private void loadFaviconForAllWebs(final String host, final ImageView imageView) {
+            if (host == null) {
+                return;
+            }
+            if (host.isEmpty()) {
+                return;
+            }
+
+            if (faviconCache.containsKey(host)) {
+                Bitmap cached = faviconCache.get(host);
+                if (cached!= null) {
+                    imageView.setImageBitmap(cached);
+                }
+                return;
+            }
+
+            final String domainForUrl = host;
+
+            Thread thread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        String faviconUrl = "https://www.google.com/s2/favicons?domain=" + domainForUrl + "&sz=64";
+                        URL url = new URL(faviconUrl);
+                        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                        connection.setConnectTimeout(5000);
+                        connection.setReadTimeout(5000);
+                        connection.setDoInput(true);
+                        connection.connect();
+                        InputStream inputStream = connection.getInputStream();
+                        final Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+                        inputStream.close();
+                        connection.disconnect();
+
+                        if (bitmap!= null) {
+                            faviconCache.put(domainForUrl, bitmap);
+
+                            BrowserActivity.this.runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    imageView.setImageBitmap(bitmap);
+                                }
+                            });
+                        }
+                    } catch (Exception e) {
+                    }
+                }
+            });
+
+            thread.start();
+        }
     }
 
     private void showSetHomeDialog() {
@@ -761,23 +975,27 @@ public class BrowserActivity extends AbstractWalletActivity {
         new AlertDialog.Builder(this)
                .setTitle(R.string.browser_set_home_title)
                .setView(input)
-               .setPositiveButton(R.string.browser_save, (dialog, which) -> {
-                    String url = input.getText().toString().trim();
-                    SharedPreferences.Editor edit = prefs.edit();
+               .setPositiveButton(R.string.browser_save, new android.content.DialogInterface.OnClickListener() {
+                   @Override
+                   public void onClick(android.content.DialogInterface dialog, int which) {
+                       String url = input.getText().toString().trim();
+                       SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                       SharedPreferences.Editor edit = prefs.edit();
 
-                    if (url.isEmpty()) {
-                        edit.remove(KEY_HOME_URL);
-                        Toast.makeText(this, R.string.browser_home_cleared, Toast.LENGTH_SHORT).show();
-                    } else {
-                        if (!url.startsWith("http")) {
-                            url = "https://" + url;
-                        }
-                        edit.putString(KEY_HOME_URL, url);
-                        Toast.makeText(this, R.string.browser_home_saved, Toast.LENGTH_SHORT).show();
-                    }
+                       if (url.isEmpty()) {
+                           edit.remove(KEY_HOME_URL);
+                           Toast.makeText(BrowserActivity.this, R.string.browser_home_cleared, Toast.LENGTH_SHORT).show();
+                       } else {
+                           if (!url.startsWith("http")) {
+                               url = "https://" + url;
+                           }
+                           edit.putString(KEY_HOME_URL, url);
+                           Toast.makeText(BrowserActivity.this, R.string.browser_home_saved, Toast.LENGTH_SHORT).show();
+                       }
 
-                    edit.apply();
-                })
+                       edit.apply();
+                   }
+               })
                .setNegativeButton(R.string.browser_cancel, null)
                .show();
     }
