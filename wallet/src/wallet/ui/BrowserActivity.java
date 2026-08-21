@@ -58,27 +58,19 @@ public class BrowserActivity extends AbstractWalletActivity {
     private ImageView btnRefreshWeb;
     private LinearLayout toolbarContainer;
     private View rootLayout;
-    private ViewGroup webViewParent;
 
     private static final String PREFS_NAME = "BrowserPrefs";
     private static final String KEY_HOME_URL = "home_url";
     private static final String KEY_HISTORY = "history_list_json";
+    private static final String KEY_LAST_URL = "last_url";
 
     private static class HistoryEntry {
         String url;
         long time;
-
         HistoryEntry(String url, long time) {
             this.url = url;
             this.time = time;
         }
-    }
-
-    private static class WebViewHolder {
-        static WebView webViewInstance = null;
-        static String lastUrl = null;
-        static int lastScrollX = 0;
-        static int lastScrollY = 0;
     }
 
     private final List<HistoryEntry> historyList = new ArrayList<>();
@@ -87,14 +79,6 @@ public class BrowserActivity extends AbstractWalletActivity {
     private View customView;
     private WebChromeClient.CustomViewCallback customViewCallback;
     private int originalSystemUiVisibility;
-
-    private static Bundle savedWebViewState = null;
-    private static String savedUrlBeforePause = null;
-    private static int scrollX = 0;
-    private static int scrollY = 0;
-    private static boolean hasSavedState = false;
-    private static boolean isNewLink = false;
-    private boolean isReusingWebView = false;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -112,205 +96,134 @@ public class BrowserActivity extends AbstractWalletActivity {
         btnBackWeb = findViewById(R.id.btn_back_web);
         btnForwardWeb = findViewById(R.id.btn_forward_web);
         btnRefreshWeb = findViewById(R.id.btn_refresh_web);
-
-        WebView originalWebView = findViewById(R.id.webview);
-        if (originalWebView!= null) {
-            webViewParent = (ViewGroup) originalWebView.getParent();
-        }
-
-        if (WebViewHolder.webViewInstance!= null) {
-            webView = WebViewHolder.webViewInstance;
-            ViewGroup oldParent = (ViewGroup) webView.getParent();
-            if (oldParent!= null) {
-                oldParent.removeView(webView);
-            }
-            if (webViewParent!= null) {
-                webViewParent.addView(webView, new ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                ));
-            }
-            isReusingWebView = true;
-        } else {
-            webView = originalWebView;
-            if (webView == null) {
-                webView = new WebView(this);
-                if (webViewParent!= null) {
-                    webViewParent.addView(webView, new ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
-                    ));
-                }
-            }
-            WebViewHolder.webViewInstance = webView;
-            isReusingWebView = false;
-        }
+        webView = findViewById(R.id.webview);
 
         updateAllColors();
         loadHistoryFromPrefs();
 
-        if (!isReusingWebView) {
-            WebSettings webSettings = webView.getSettings();
-            webSettings.setJavaScriptEnabled(true);
-            webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
-            webSettings.setDomStorageEnabled(true);
-            webSettings.setDatabaseEnabled(true);
-            webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
-            webSettings.setAllowFileAccess(true);
-            webSettings.setAllowContentAccess(true);
-            webSettings.setAllowFileAccessFromFileURLs(true);
-            webSettings.setAllowUniversalAccessFromFileURLs(true);
-            webSettings.setLoadsImagesAutomatically(true);
-            webSettings.setBlockNetworkImage(false);
-            webSettings.setBlockNetworkLoads(false);
-            webSettings.setMediaPlaybackRequiresUserGesture(false);
-            webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-            webSettings.setGeolocationEnabled(true);
-            webSettings.setUseWideViewPort(true);
-            webSettings.setLoadWithOverviewMode(true);
-            webSettings.setSupportZoom(true);
-            webSettings.setBuiltInZoomControls(true);
-            webSettings.setDisplayZoomControls(false);
+        WebSettings webSettings = webView.getSettings();
+        webSettings.setJavaScriptEnabled(true);
+        webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
+        webSettings.setDomStorageEnabled(true);
+        webSettings.setDatabaseEnabled(true);
+        webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        webSettings.setAllowFileAccess(true);
+        webSettings.setAllowContentAccess(true);
+        webSettings.setAllowFileAccessFromFileURLs(true);
+        webSettings.setAllowUniversalAccessFromFileURLs(true);
+        webSettings.setLoadsImagesAutomatically(true);
+        webSettings.setBlockNetworkImage(false);
+        webSettings.setBlockNetworkLoads(false);
+        webSettings.setMediaPlaybackRequiresUserGesture(false);
+        webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        webSettings.setGeolocationEnabled(true);
+        webSettings.setUseWideViewPort(true);
+        webSettings.setLoadWithOverviewMode(true);
+        webSettings.setSupportZoom(true);
+        webSettings.setBuiltInZoomControls(true);
+        webSettings.setDisplayZoomControls(false);
 
-            webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-            getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-            String ua = webSettings.getUserAgentString();
-            webSettings.setUserAgentString(ua + " Chrome/120.0.0.0 Mobile");
-            webView.setFocusable(true);
-            webView.setFocusableInTouchMode(true);
+        String ua = webSettings.getUserAgentString();
+        webSettings.setUserAgentString(ua + " Chrome/120.0.0.0 Mobile");
+        webView.setFocusable(true);
+        webView.setFocusableInTouchMode(true);
 
-            webView.setWebViewClient(new WebViewClient() {
+        webView.setWebViewClient(new WebViewClient() {
 
-                private boolean isRestoring = false;
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                String url = request.getUrl().toString();
+                String scheme = request.getUrl().getScheme();
 
-                @Override
-                public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                    String url = request.getUrl().toString();
-                    String scheme = request.getUrl().getScheme();
-
-                    if (scheme!= null &&!scheme.equalsIgnoreCase("http") &&!scheme.equalsIgnoreCase("https")) {
-                        try {
-                            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                            view.getContext().startActivity(intent);
-                            urlBar.setText(url);
-                            return true;
-                        } catch (Exception ignored) {
-                            urlBar.setText(url);
-                            return true;
-                        }
-                    }
-
-                    if (isRestoring) {
-                        isRestoring = false;
+                if (scheme!= null &&!scheme.equalsIgnoreCase("http") &&!scheme.equalsIgnoreCase("https")) {
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                        view.getContext().startActivity(intent);
                         urlBar.setText(url);
-                        return true;
+                    } catch (Exception ignored) {
                     }
-
-                    if (url.equals(view.getUrl()) &&!isNewLink) {
-                        urlBar.setText(url);
-                        return true;
-                    }
-
-                    stopAllMediaPlayback();
-                    view.loadUrl(url);
-                    urlBar.setText(url);
                     return true;
                 }
 
-                @Override
-                public void onPageFinished(WebView view, String url) {
-                    super.onPageFinished(view, url);
+                stopAllMediaPlayback();
+                view.loadUrl(url);
+                urlBar.setText(url);
+                return true;
+            }
 
-                    if (urlBar!= null &&!urlBar.getText().toString().equals(url)) {
-                        urlBar.setText(url);
-                    }
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
 
-                    saveHistory(url);
-
-                    if (hasSavedState &&!isNewLink) {
-                        webView.scrollTo(scrollX, scrollY);
-                        hasSavedState = false;
-                    }
-
-                    isNewLink = false;
-                    if (url!= null &&!url.equals("about:blank") &&!url.isEmpty()) {
-                        WebViewHolder.lastUrl = url;
-                    }
+                if (urlBar!= null) {
+                    urlBar.setText(url);
                 }
 
-                @Override
-                public void doUpdateVisitedHistory(WebView view, String url, boolean isReload) {
-                    super.doUpdateVisitedHistory(view, url, isReload);
+                saveHistory(url);
 
-                    if (urlBar!= null && url!= null &&!url.equals("about:blank")) {
-                        urlBar.setText(url);
-                    }
-
-                    saveHistory(url);
+                if (url!= null &&!url.equals("about:blank") &&!url.isEmpty()) {
+                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putString(KEY_LAST_URL, url).apply();
                 }
-            });
+            }
 
-            webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void doUpdateVisitedHistory(WebView view, String url, boolean isReload) {
+                super.doUpdateVisitedHistory(view, url, isReload);
 
-                @Override
-                public void onShowCustomView(View view, CustomViewCallback callback) {
-                    if (customView!= null) {
-                        customViewCallback.onCustomViewHidden();
-                        return;
-                    }
-
-                    customView = view;
-                    customViewCallback = callback;
-                    originalSystemUiVisibility = getWindow().getDecorView().getSystemUiVisibility();
-
-                    if (getActionBar()!= null) {
-                        getActionBar().hide();
-                    }
-
-                    getWindow().getDecorView().setSystemUiVisibility(
-                            View.SYSTEM_UI_FLAG_FULLSCREEN |
-                                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-                                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                    );
-
-                    ((FrameLayout) rootLayout).addView(view);
+                if (urlBar!= null && url!= null &&!url.equals("about:blank")) {
+                    urlBar.setText(url);
                 }
 
-                @Override
-                public void onHideCustomView() {
-                    if (customView == null) {
-                        return;
-                    }
+                saveHistory(url);
+            }
+        });
 
-                    ((FrameLayout) rootLayout).removeView(customView);
-                    customView = null;
+        webView.setWebChromeClient(new WebChromeClient() {
 
-                    if (getActionBar()!= null) {
-                        getActionBar().show();
-                    }
-
-                    getWindow().getDecorView().setSystemUiVisibility(originalSystemUiVisibility);
+            @Override
+            public void onShowCustomView(View view, CustomViewCallback callback) {
+                if (customView!= null) {
                     customViewCallback.onCustomViewHidden();
+                    return;
                 }
-            });
-        } else {
-            if (webView.getUrl()!= null &&!webView.getUrl().equals("about:blank")) {
-                urlBar.setText(webView.getUrl());
-            } else if (WebViewHolder.lastUrl!= null &&!WebViewHolder.lastUrl.equals("about:blank")) {
-                urlBar.setText(WebViewHolder.lastUrl);
-                webView.loadUrl(WebViewHolder.lastUrl);
+
+                customView = view;
+                customViewCallback = callback;
+                originalSystemUiVisibility = getWindow().getDecorView().getSystemUiVisibility();
+
+                if (getActionBar()!= null) {
+                    getActionBar().hide();
+                }
+
+                getWindow().getDecorView().setSystemUiVisibility(
+                        View.SYSTEM_UI_FLAG_FULLSCREEN |
+                                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                );
+
+                ((FrameLayout) rootLayout).addView(view);
             }
 
-            if (WebViewHolder.lastScrollX!= 0 || WebViewHolder.lastScrollY!= 0) {
-                webView.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        webView.scrollTo(WebViewHolder.lastScrollX, WebViewHolder.lastScrollY);
-                    }
-                });
+            @Override
+            public void onHideCustomView() {
+                if (customView == null) {
+                    return;
+                }
+
+                ((FrameLayout) rootLayout).removeView(customView);
+                customView = null;
+
+                if (getActionBar()!= null) {
+                    getActionBar().show();
+                }
+
+                getWindow().getDecorView().setSystemUiVisibility(originalSystemUiVisibility);
+                customViewCallback.onCustomViewHidden();
             }
-        }
+        });
 
         btnBackWeb.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -379,22 +292,19 @@ public class BrowserActivity extends AbstractWalletActivity {
         if (intentData!= null) {
             String newUrl = intentData.toString();
             urlBar.setText(newUrl);
-            stopAllMediaPlayback();
             webView.loadUrl(newUrl);
-            clearSavedState();
-            isNewLink = true;
-        } else if (!isReusingWebView) {
-            if (savedWebViewState!= null && savedUrlBeforePause!= null) {
-                webView.restoreState(savedWebViewState);
-                urlBar.setText(savedUrlBeforePause);
-                isNewLink = false;
-                hasSavedState = true;
-            } else if (savedInstanceState!= null) {
-                webView.restoreState(savedInstanceState);
-                String restoredUrl = webView.getUrl();
-                if (restoredUrl!= null) {
-                    urlBar.setText(restoredUrl);
-                }
+        } else if (savedInstanceState!= null) {
+            webView.restoreState(savedInstanceState);
+            String restoredUrl = webView.getUrl();
+            if (restoredUrl!= null) {
+                urlBar.setText(restoredUrl);
+            }
+        } else {
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            String last = prefs.getString(KEY_LAST_URL, null);
+            if (last!= null &&!last.isEmpty() &&!last.equals("about:blank")) {
+                urlBar.setText(last);
+                webView.loadUrl(last);
             }
         }
     }
@@ -404,8 +314,12 @@ public class BrowserActivity extends AbstractWalletActivity {
             return;
         }
         try {
+            webView.loadUrl("javascript:(function(){try{var ms=document.querySelectorAll('audio,video');for(var i=0;i<ms.length;i++){try{ms[i].pause();ms[i].currentTime=0;try{ms[i].src='';}catch(e){}try{ms[i].removeAttribute('src');}catch(e){}try{ms[i].load();}catch(e){}}catch(e){}} }catch(e){}})()");
+        } catch (Exception ignored) {
+        }
+        try {
             webView.evaluateJavascript(
-                    "try{var m=document.querySelectorAll('audio,video');for(var i=0;i<m.length;i++){m[i].pause();}}catch(e){}",
+                    "(function(){try{var ms=document.querySelectorAll('audio,video');for(var i=0;i<ms.length;i++){try{ms[i].pause();ms[i].src='';ms[i].load();}catch(e){}}}catch(e){}})();",
                     null
             );
         } catch (Exception ignored) {
@@ -442,10 +356,17 @@ public class BrowserActivity extends AbstractWalletActivity {
                     now = now - 1000;
                 }
             }
-            saveHistoryToPrefs();
-            SharedPreferences.Editor editor = prefs.edit();
-            editor.remove("history_list");
-            editor.apply();
+            try {
+                JSONArray newArr = new JSONArray();
+                for (HistoryEntry e : historyList) {
+                    JSONObject o = new JSONObject();
+                    o.put("url", e.url);
+                    o.put("time", e.time);
+                    newArr.put(o);
+                }
+                prefs.edit().putString(KEY_HISTORY, newArr.toString()).remove("history_list").apply();
+            } catch (Exception ignored) {
+            }
         }
     }
 
@@ -475,10 +396,6 @@ public class BrowserActivity extends AbstractWalletActivity {
             historyList.remove(historyList.size() - 1);
         }
 
-        saveHistoryToPrefs();
-    }
-
-    private void saveHistoryToPrefs() {
         try {
             JSONArray arr = new JSONArray();
             for (HistoryEntry e : historyList) {
@@ -487,10 +404,7 @@ public class BrowserActivity extends AbstractWalletActivity {
                 o.put("time", e.time);
                 arr.put(o);
             }
-            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-            SharedPreferences.Editor editor = prefs.edit();
-            editor.putString(KEY_HISTORY, arr.toString());
-            editor.apply();
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putString(KEY_HISTORY, arr.toString()).apply();
         } catch (Exception ignored) {
         }
     }
@@ -574,16 +488,12 @@ public class BrowserActivity extends AbstractWalletActivity {
             return true;
         } else if (id == R.id.menu_browser_clear_history) {
             historyList.clear();
-            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-            SharedPreferences.Editor editor = prefs.edit();
-            editor.remove(KEY_HISTORY);
-            editor.apply();
+            getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().remove(KEY_HISTORY).apply();
             Toast.makeText(this, R.string.browser_clear_history, Toast.LENGTH_SHORT).show();
             return true;
         } else if (id == R.id.menu_browser_settings_root) {
             return true;
         } else if (id == android.R.id.home) {
-            saveBrowserState();
             if (customView!= null && customViewCallback!= null) {
                 customViewCallback.onCustomViewHidden();
             }
@@ -594,33 +504,12 @@ public class BrowserActivity extends AbstractWalletActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private void saveBrowserState() {
-        if (webView!= null) {
-            String curUrl = webView.getUrl();
-            if (curUrl!= null &&!curUrl.equals("about:blank") &&!curUrl.isEmpty()) {
-                WebViewHolder.lastUrl = curUrl;
-                savedUrlBeforePause = curUrl;
-            }
-            WebViewHolder.lastScrollX = webView.getScrollX();
-            WebViewHolder.lastScrollY = webView.getScrollY();
-
-            if (!isFinishing()) {
-                savedWebViewState = new Bundle();
-                webView.saveState(savedWebViewState);
-                scrollX = webView.getScrollX();
-                scrollY = webView.getScrollY();
-                hasSavedState = true;
-            }
-        }
-    }
-
     @Override
     protected void onPause() {
-        saveBrowserState();
-        if (webView!= null) {
-            webView.resumeTimers();
-        }
         super.onPause();
+        if (webView!= null) {
+            webView.onPause();
+        }
     }
 
     @Override
@@ -628,7 +517,6 @@ public class BrowserActivity extends AbstractWalletActivity {
         super.onResume();
         if (webView!= null) {
             webView.onResume();
-            webView.resumeTimers();
         }
         updateAllColors();
         invalidateOptionsMenu();
@@ -645,26 +533,14 @@ public class BrowserActivity extends AbstractWalletActivity {
             urlBar.setText(newUrl);
             stopAllMediaPlayback();
             webView.loadUrl(newUrl);
-            clearSavedState();
-            isNewLink = true;
         }
-    }
-
-    private void clearSavedState() {
-        savedWebViewState = null;
-        savedUrlBeforePause = null;
-        scrollX = 0;
-        scrollY = 0;
-        hasSavedState = false;
-        isNewLink = false;
     }
 
     @Override
     public void finish() {
-        saveBrowserState();
-        if (webViewParent!= null) {
+        if (webView!= null) {
             try {
-                webViewParent.removeView(webView);
+                stopAllMediaPlayback();
             } catch (Exception ignored) {
             }
         }
@@ -673,12 +549,9 @@ public class BrowserActivity extends AbstractWalletActivity {
 
     @Override
     protected void onDestroy() {
-        if (!isFinishing()) {
-            saveBrowserState();
-        }
-        if (webViewParent!= null) {
+        if (webView!= null) {
             try {
-                webViewParent.removeView(webView);
+                webView.destroy();
             } catch (Exception ignored) {
             }
         }
@@ -696,7 +569,6 @@ public class BrowserActivity extends AbstractWalletActivity {
             stopAllMediaPlayback();
             webView.goBack();
         } else {
-            saveBrowserState();
             super.onBackPressed();
         }
     }
@@ -763,10 +635,6 @@ public class BrowserActivity extends AbstractWalletActivity {
             urlBar.requestLayout();
         }
 
-        if (webViewParent!= null) {
-            webViewParent.requestLayout();
-        }
-
         if (rootLayout!= null) {
             rootLayout.requestLayout();
         }
@@ -802,11 +670,9 @@ public class BrowserActivity extends AbstractWalletActivity {
             finalUrl = "https://www.google.com/search?q=" + Uri.encode(input);
         }
 
-        isNewLink = true;
         stopAllMediaPlayback();
         webView.loadUrl(finalUrl);
         urlBar.setText(finalUrl);
-        clearSavedState();
     }
 
     private boolean isValidUrl(String input) {
@@ -898,10 +764,7 @@ public class BrowserActivity extends AbstractWalletActivity {
                     @Override
                     public void onClick(android.content.DialogInterface d, int which) {
                         historyList.clear();
-                        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                        SharedPreferences.Editor editor = prefs.edit();
-                        editor.remove(KEY_HISTORY);
-                        editor.apply();
+                        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().remove(KEY_HISTORY).apply();
                         Toast.makeText(BrowserActivity.this, R.string.browser_clear_history, Toast.LENGTH_SHORT).show();
                     }
                 })
@@ -1039,7 +902,17 @@ public class BrowserActivity extends AbstractWalletActivity {
                 @Override
                 public void onClick(View v) {
                     historyList.remove(position);
-                    saveHistoryToPrefs();
+                    try {
+                        JSONArray arr = new JSONArray();
+                        for (HistoryEntry e : historyList) {
+                            JSONObject o = new JSONObject();
+                            o.put("url", e.url);
+                            o.put("time", e.time);
+                            arr.put(o);
+                        }
+                        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putString(KEY_HISTORY, arr.toString()).apply();
+                    } catch (Exception ignored) {
+                    }
                     notifyDataSetChanged();
                 }
             });
