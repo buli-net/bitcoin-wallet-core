@@ -16,7 +16,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
-import androidx.appcompat.app.AlertDialog;
+import android.app.AlertDialog; //
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
