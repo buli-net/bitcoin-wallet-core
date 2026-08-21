@@ -78,19 +78,6 @@
         android:id="@+id/wallet_options_network_monitor"
         android:showAsAction="never"
         android:title="@string/network_monitor_activity_title" />
-    <item
-        android:id="@+id/wallet_options_preferences"
-        android:showAsAction="never"
-        android:title="@string/preferences_activity_title" />
-    <item
-        android:id="@+id/wallet_options_report_issue"
-        android:showAsAction="never"
-        android:title="@string/preferences_report_issue_title" />
-       <!-- donate -->
-    <item
-        android:id="@+id/wallet_options_donate"
-        android:showAsAction="never"
-        android:title="@string/wallet_options_donate" />
     <!-- ============================================== -->
     <!-- NEW: Utilities Submenu -->
     <!-- ============================================== -->
@@ -105,6 +92,19 @@
         </menu>
     </item>
 <!-- END-NEW: Utilities Submenu -->
+    <item
+        android:id="@+id/wallet_options_preferences"
+        android:showAsAction="never"
+        android:title="@string/preferences_activity_title" />
+    <item
+        android:id="@+id/wallet_options_report_issue"
+        android:showAsAction="never"
+        android:title="@string/preferences_report_issue_title" />
+       <!-- donate -->
+    <item
+        android:id="@+id/wallet_options_donate"
+        android:showAsAction="never"
+        android:title="@string/wallet_options_donate" />
     <item
         android:id="@+id/wallet_options_help"
         android:orderInCategory="999"
