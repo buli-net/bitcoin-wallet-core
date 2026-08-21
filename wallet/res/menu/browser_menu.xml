@@ -3,26 +3,23 @@
 
     <item
         android:id="@+id/menu_browser_home"
-        android:title="@string/browser_set_home_title"
         android:icon="@drawable/ic_home_24dp"
-        android:showAsAction="ifRoom|withText"/>
+        android:showAsAction="always|withText"
+        android:title="@string/browser_set_home_title"
+        android:titleCondensed="@string/browser_set_home_title"/>
 
     <item
         android:id="@+id/menu_browser_history"
-        android:title="@string/browser_history_title"
         android:icon="@drawable/ic_history_24dp"
-        android:showAsAction="ifRoom|withText"/>
+        android:showAsAction="ifRoom|withText"
+        android:title="@string/browser_history_title"
+        android:titleCondensed="@string/browser_history_title"/>
 
     <item
         android:id="@+id/menu_browser_settings"
-        android:title="@string/browser_set_home_title"
         android:icon="@drawable/ic_settings_24dp"
-        android:showAsAction="ifRoom|withText"/>
-
-    <!-- ✅ BẮT BUỘC: Mục ẩn cuối → BUỘC hiện nút 3 chấm -->
-    <item
-        android:showAsAction="never"
-        android:visible="false"
-        android:enabled="false"/>
+        android:showAsAction="ifRoom|withText"
+        android:title="@string/browser_set_home_title"
+        android:titleCondensed="@string/browser_set_home_title"/>
 
 </menu>
