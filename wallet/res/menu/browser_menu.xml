@@ -1,25 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
         android:id="@+id/menu_browser_home"
         android:icon="@drawable/ic_home_24dp"
-        android:showAsAction="always|withText"
-        android:title="@string/browser_set_home_title"
-        android:titleCondensed="@string/browser_set_home_title"/>
+        android:title="@string/browser_home_title"
+        android:titleCondensed="@string/browser_home_title"
+        app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/menu_browser_history"
         android:icon="@drawable/ic_history_24dp"
-        android:showAsAction="ifRoom|withText"
         android:title="@string/browser_history_title"
-        android:titleCondensed="@string/browser_history_title"/>
+        android:titleCondensed="@string/browser_history_title"
+        app:showAsAction="ifRoom" />
 
+    <!-- Thằng này để never để ép hiện dấu 3 chấm như trang ví giấy -->
     <item
         android:id="@+id/menu_browser_settings"
         android:icon="@drawable/ic_settings_24dp"
-        android:showAsAction="ifRoom|withText"
         android:title="@string/browser_set_home_title"
-        android:titleCondensed="@string/browser_set_home_title"/>
+        android:titleCondensed="@string/browser_set_home_title"
+        app:showAsAction="never" />
 
 </menu>
