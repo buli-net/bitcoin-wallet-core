@@ -8,6 +8,7 @@ import android.content.res.TypedArray;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
@@ -158,6 +159,7 @@ public class BrowserActivity extends AbstractWalletActivity {
                     webView.scrollTo(scrollX, scrollY);
                     hasSavedState = false;
                 }
+                isNewLink = false;
             }
         });
 
@@ -200,11 +202,29 @@ public class BrowserActivity extends AbstractWalletActivity {
             webView.reload();
         });
 
-        // === NHẬP URL ===
+        // === NHẬP URL - FIX ENTER = GO ===
+        urlBar.setImeOptions(EditorInfo.IME_ACTION_GO);
+        urlBar.setSingleLine(true);
+
         urlBar.setOnEditorActionListener((v, actionId, event) -> {
-            if (actionId == EditorInfo.IME_ACTION_GO ||
-                (event!= null && event.getKeyCode() == android.view.KeyEvent.KEYCODE_ENTER
-                    && event.getAction() == android.view.KeyEvent.ACTION_DOWN)) {
+            boolean isEnterKey = event!= null
+                    && event.getKeyCode() == KeyEvent.KEYCODE_ENTER
+                    && event.getAction() == KeyEvent.ACTION_DOWN;
+
+            if (actionId == EditorInfo.IME_ACTION_GO
+                    || actionId == EditorInfo.IME_ACTION_SEARCH
+                    || actionId == EditorInfo.IME_ACTION_DONE
+                    || actionId == EditorInfo.IME_ACTION_SEND
+                    || actionId == EditorInfo.IME_NULL
+                    || isEnterKey) {
+                handleUrlInput();
+                return true;
+            }
+            return false;
+        });
+
+        urlBar.setOnKeyListener((v, keyCode, event) -> {
+            if (keyCode == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_DOWN) {
                 handleUrlInput();
                 return true;
             }
@@ -429,6 +449,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         } else {
             finalUrl = "https://www.google.com/search?q=" + Uri.encode(input);
         }
+        isNewLink = true;
         webView.loadUrl(finalUrl);
         urlBar.setText(finalUrl);
         clearSavedState();
@@ -446,8 +467,10 @@ public class BrowserActivity extends AbstractWalletActivity {
 
     private void hideKeyboard() {
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        imm.hideSoftInputFromWindow(urlBar.getWindowToken(), 0);
-        urlBar.clearFocus();
+        if (imm!= null && urlBar!= null) {
+            imm.hideSoftInputFromWindow(urlBar.getWindowToken(), 0);
+        }
+        if (urlBar!= null) urlBar.clearFocus();
     }
 
     @Override
@@ -472,25 +495,25 @@ public class BrowserActivity extends AbstractWalletActivity {
     private void showHistoryDialog() {
         if (historyList.isEmpty()) {
             new AlertDialog.Builder(this)
-               .setMessage(R.string.browser_no_history)
-               .setPositiveButton(R.string.browser_close, null)
-               .show();
+              .setMessage(R.string.browser_no_history)
+              .setPositiveButton(R.string.browser_close, null)
+              .show();
             return;
         }
         CharSequence[] items = historyList.toArray(new CharSequence[0]);
         new AlertDialog.Builder(this)
-           .setTitle(R.string.browser_history_title)
-           .setItems(items, (dialog, which) -> {
+          .setTitle(R.string.browser_history_title)
+          .setItems(items, (dialog, which) -> {
                 String url = historyList.get(which);
                 webView.loadUrl(url);
                 urlBar.setText(url);
             })
-           .setPositiveButton(R.string.browser_clear_history, (dialog, which) -> {
+          .setPositiveButton(R.string.browser_clear_history, (dialog, which) -> {
                 historyList.clear();
                 Toast.makeText(this, R.string.browser_clear_history, Toast.LENGTH_SHORT).show();
             })
-           .setNegativeButton(R.string.browser_close, null)
-           .show();
+          .setNegativeButton(R.string.browser_close, null)
+          .show();
     }
 
     private void showSetHomeDialog() {
@@ -501,9 +524,9 @@ public class BrowserActivity extends AbstractWalletActivity {
         if (currentHome!= null) input.setText(currentHome);
 
         new AlertDialog.Builder(this)
-           .setTitle(R.string.browser_set_home_title)
-           .setView(input)
-           .setPositiveButton(R.string.browser_save, (dialog, which) -> {
+          .setTitle(R.string.browser_set_home_title)
+          .setView(input)
+          .setPositiveButton(R.string.browser_save, (dialog, which) -> {
                 String url = input.getText().toString().trim();
                 SharedPreferences.Editor edit = prefs.edit();
                 if (url.isEmpty()) {
@@ -516,7 +539,7 @@ public class BrowserActivity extends AbstractWalletActivity {
                 }
                 edit.apply();
             })
-           .setNegativeButton(R.string.browser_cancel, null)
-           .show();
+          .setNegativeButton(R.string.browser_cancel, null)
+          .show();
     }
 }
