@@ -6,18 +6,18 @@
         android:id="@+id/menu_browser_home"
         android:title="@string/browser_set_home_title"
         android:icon="@drawable/ic_home_24dp"
-        android:showAsAction="never"/>
+        android:showAsAction="always|withText"/>
 
     <item
         android:id="@+id/menu_browser_history"
         android:title="@string/browser_history_title"
         android:icon="@drawable/ic_history_24dp"
-        android:showAsAction="never"/>
+        android:showAsAction="ifRoom|withText"/>
 
     <item
         android:id="@+id/menu_browser_settings"
         android:title="@string/browser_set_home_title"
         android:icon="@drawable/ic_settings_24dp"
-        android:showAsAction="never"/>
+        android:showAsAction="ifRoom|withText"/>
 
 </menu>
