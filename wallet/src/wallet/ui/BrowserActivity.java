@@ -58,7 +58,6 @@ public class BrowserActivity extends AbstractWalletActivity {
     private ImageView btnRefreshWeb;
     private LinearLayout toolbarContainer;
     private View rootLayout;
-    private ViewGroup webViewParent;
 
     private static final String PREFS_NAME = "BrowserPrefs";
     private static final String KEY_HOME_URL = "home_url";
@@ -68,16 +67,10 @@ public class BrowserActivity extends AbstractWalletActivity {
     private static class HistoryEntry {
         String url;
         long time;
-
         HistoryEntry(String url, long time) {
             this.url = url;
             this.time = time;
         }
-    }
-
-    private static class WebViewHolder {
-        static WebView webViewInstance = null;
-        static String lastUrl = null;
     }
 
     private final List<HistoryEntry> historyList = new ArrayList<>();
@@ -86,7 +79,6 @@ public class BrowserActivity extends AbstractWalletActivity {
     private View customView;
     private WebChromeClient.CustomViewCallback customViewCallback;
     private int originalSystemUiVisibility;
-    private boolean isReusingWebView = false;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -104,184 +96,134 @@ public class BrowserActivity extends AbstractWalletActivity {
         btnBackWeb = findViewById(R.id.btn_back_web);
         btnForwardWeb = findViewById(R.id.btn_forward_web);
         btnRefreshWeb = findViewById(R.id.btn_refresh_web);
-
-        WebView originalWebView = findViewById(R.id.webview);
-        if (originalWebView!= null) {
-            webViewParent = (ViewGroup) originalWebView.getParent();
-        }
-
-        if (WebViewHolder.webViewInstance!= null) {
-            webView = WebViewHolder.webViewInstance;
-            ViewGroup oldParent = (ViewGroup) webView.getParent();
-            if (oldParent!= null) {
-                oldParent.removeView(webView);
-            }
-            if (webViewParent!= null) {
-                webViewParent.addView(webView, new ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                ));
-            }
-            isReusingWebView = true;
-        } else {
-            webView = originalWebView;
-            if (webView == null) {
-                webView = new WebView(this);
-                if (webViewParent!= null) {
-                    webViewParent.addView(webView, new ViewGroup.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.MATCH_PARENT
-                    ));
-                }
-            }
-            WebViewHolder.webViewInstance = webView;
-            isReusingWebView = false;
-        }
+        webView = findViewById(R.id.webview);
 
         updateAllColors();
         loadHistoryFromPrefs();
 
-        if (!isReusingWebView) {
-            WebSettings webSettings = webView.getSettings();
-            webSettings.setJavaScriptEnabled(true);
-            webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
-            webSettings.setDomStorageEnabled(true);
-            webSettings.setDatabaseEnabled(true);
-            webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
-            webSettings.setAllowFileAccess(true);
-            webSettings.setAllowContentAccess(true);
-            webSettings.setAllowFileAccessFromFileURLs(true);
-            webSettings.setAllowUniversalAccessFromFileURLs(true);
-            webSettings.setLoadsImagesAutomatically(true);
-            webSettings.setBlockNetworkImage(false);
-            webSettings.setBlockNetworkLoads(false);
-            webSettings.setMediaPlaybackRequiresUserGesture(false);
-            webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-            webSettings.setGeolocationEnabled(true);
-            webSettings.setUseWideViewPort(true);
-            webSettings.setLoadWithOverviewMode(true);
-            webSettings.setSupportZoom(true);
-            webSettings.setBuiltInZoomControls(true);
-            webSettings.setDisplayZoomControls(false);
+        WebSettings webSettings = webView.getSettings();
+        webSettings.setJavaScriptEnabled(true);
+        webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
+        webSettings.setDomStorageEnabled(true);
+        webSettings.setDatabaseEnabled(true);
+        webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        webSettings.setAllowFileAccess(true);
+        webSettings.setAllowContentAccess(true);
+        webSettings.setAllowFileAccessFromFileURLs(true);
+        webSettings.setAllowUniversalAccessFromFileURLs(true);
+        webSettings.setLoadsImagesAutomatically(true);
+        webSettings.setBlockNetworkImage(false);
+        webSettings.setBlockNetworkLoads(false);
+        webSettings.setMediaPlaybackRequiresUserGesture(false);
+        webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        webSettings.setGeolocationEnabled(true);
+        webSettings.setUseWideViewPort(true);
+        webSettings.setLoadWithOverviewMode(true);
+        webSettings.setSupportZoom(true);
+        webSettings.setBuiltInZoomControls(true);
+        webSettings.setDisplayZoomControls(false);
 
-            webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
-            getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-            String ua = webSettings.getUserAgentString();
-            webSettings.setUserAgentString(ua + " Chrome/120.0.0.0 Mobile");
-            webView.setFocusable(true);
-            webView.setFocusableInTouchMode(true);
+        String ua = webSettings.getUserAgentString();
+        webSettings.setUserAgentString(ua + " Chrome/120.0.0.0 Mobile");
+        webView.setFocusable(true);
+        webView.setFocusableInTouchMode(true);
 
-            webView.setWebViewClient(new WebViewClient() {
+        webView.setWebViewClient(new WebViewClient() {
 
-                @Override
-                public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                    String url = request.getUrl().toString();
-                    String scheme = request.getUrl().getScheme();
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                String url = request.getUrl().toString();
+                String scheme = request.getUrl().getScheme();
 
-                    if (scheme!= null &&!scheme.equalsIgnoreCase("http") &&!scheme.equalsIgnoreCase("https")) {
-                        try {
-                            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                            view.getContext().startActivity(intent);
-                            urlBar.setText(url);
-                        } catch (Exception ignored) {
-                        }
-                        return true;
+                if (scheme!= null &&!scheme.equalsIgnoreCase("http") &&!scheme.equalsIgnoreCase("https")) {
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                        view.getContext().startActivity(intent);
+                        urlBar.setText(url);
+                    } catch (Exception ignored) {
                     }
-
-                    stopAllMediaPlayback();
-                    view.loadUrl(url);
-                    urlBar.setText(url);
                     return true;
                 }
 
-                @Override
-                public void onPageFinished(WebView view, String url) {
-                    super.onPageFinished(view, url);
+                stopAllMediaPlayback();
+                view.loadUrl(url);
+                urlBar.setText(url);
+                return true;
+            }
 
-                    if (urlBar!= null) {
-                        urlBar.setText(url);
-                    }
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
 
-                    saveHistory(url);
-
-                    if (url!= null &&!url.equals("about:blank") &&!url.isEmpty()) {
-                        WebViewHolder.lastUrl = url;
-                        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putString(KEY_LAST_URL, url).apply();
-                    }
+                if (urlBar!= null) {
+                    urlBar.setText(url);
                 }
 
-                @Override
-                public void doUpdateVisitedHistory(WebView view, String url, boolean isReload) {
-                    super.doUpdateVisitedHistory(view, url, isReload);
+                saveHistory(url);
 
-                    if (urlBar!= null && url!= null &&!url.equals("about:blank")) {
-                        urlBar.setText(url);
-                    }
-
-                    saveHistory(url);
-                }
-            });
-
-            webView.setWebChromeClient(new WebChromeClient() {
-
-                @Override
-                public void onShowCustomView(View view, CustomViewCallback callback) {
-                    if (customView!= null) {
-                        customViewCallback.onCustomViewHidden();
-                        return;
-                    }
-
-                    customView = view;
-                    customViewCallback = callback;
-                    originalSystemUiVisibility = getWindow().getDecorView().getSystemUiVisibility();
-
-                    if (getActionBar()!= null) {
-                        getActionBar().hide();
-                    }
-
-                    getWindow().getDecorView().setSystemUiVisibility(
-                            View.SYSTEM_UI_FLAG_FULLSCREEN |
-                                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-                                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                    );
-
-                    ((FrameLayout) rootLayout).addView(view);
-                }
-
-                @Override
-                public void onHideCustomView() {
-                    if (customView == null) {
-                        return;
-                    }
-
-                    ((FrameLayout) rootLayout).removeView(customView);
-                    customView = null;
-
-                    if (getActionBar()!= null) {
-                        getActionBar().show();
-                    }
-
-                    getWindow().getDecorView().setSystemUiVisibility(originalSystemUiVisibility);
-                    customViewCallback.onCustomViewHidden();
-                }
-            });
-        } else {
-            String current = webView.getUrl();
-            if (current!= null &&!current.equals("about:blank") &&!current.isEmpty()) {
-                urlBar.setText(current);
-            } else {
-                SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                String last = prefs.getString(KEY_LAST_URL, null);
-                if (last == null) {
-                    last = WebViewHolder.lastUrl;
-                }
-                if (last!= null &&!last.equals("about:blank") &&!last.isEmpty()) {
-                    urlBar.setText(last);
-                    webView.loadUrl(last);
+                if (url!= null &&!url.equals("about:blank") &&!url.isEmpty()) {
+                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().putString(KEY_LAST_URL, url).apply();
                 }
             }
-        }
+
+            @Override
+            public void doUpdateVisitedHistory(WebView view, String url, boolean isReload) {
+                super.doUpdateVisitedHistory(view, url, isReload);
+
+                if (urlBar!= null && url!= null &&!url.equals("about:blank")) {
+                    urlBar.setText(url);
+                }
+
+                saveHistory(url);
+            }
+        });
+
+        webView.setWebChromeClient(new WebChromeClient() {
+
+            @Override
+            public void onShowCustomView(View view, CustomViewCallback callback) {
+                if (customView!= null) {
+                    customViewCallback.onCustomViewHidden();
+                    return;
+                }
+
+                customView = view;
+                customViewCallback = callback;
+                originalSystemUiVisibility = getWindow().getDecorView().getSystemUiVisibility();
+
+                if (getActionBar()!= null) {
+                    getActionBar().hide();
+                }
+
+                getWindow().getDecorView().setSystemUiVisibility(
+                        View.SYSTEM_UI_FLAG_FULLSCREEN |
+                                View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                );
+
+                ((FrameLayout) rootLayout).addView(view);
+            }
+
+            @Override
+            public void onHideCustomView() {
+                if (customView == null) {
+                    return;
+                }
+
+                ((FrameLayout) rootLayout).removeView(customView);
+                customView = null;
+
+                if (getActionBar()!= null) {
+                    getActionBar().show();
+                }
+
+                getWindow().getDecorView().setSystemUiVisibility(originalSystemUiVisibility);
+                customViewCallback.onCustomViewHidden();
+            }
+        });
 
         btnBackWeb.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -350,22 +292,19 @@ public class BrowserActivity extends AbstractWalletActivity {
         if (intentData!= null) {
             String newUrl = intentData.toString();
             urlBar.setText(newUrl);
-            stopAllMediaPlayback();
             webView.loadUrl(newUrl);
-        } else if (!isReusingWebView) {
-            if (savedInstanceState!= null) {
-                webView.restoreState(savedInstanceState);
-                String restoredUrl = webView.getUrl();
-                if (restoredUrl!= null) {
-                    urlBar.setText(restoredUrl);
-                }
-            } else {
-                SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                String last = prefs.getString(KEY_LAST_URL, null);
-                if (last!= null &&!last.isEmpty() &&!last.equals("about:blank") && webView.getUrl() == null) {
-                    urlBar.setText(last);
-                    webView.loadUrl(last);
-                }
+        } else if (savedInstanceState!= null) {
+            webView.restoreState(savedInstanceState);
+            String restoredUrl = webView.getUrl();
+            if (restoredUrl!= null) {
+                urlBar.setText(restoredUrl);
+            }
+        } else {
+            SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+            String last = prefs.getString(KEY_LAST_URL, null);
+            if (last!= null &&!last.isEmpty() &&!last.equals("about:blank")) {
+                urlBar.setText(last);
+                webView.loadUrl(last);
             }
         }
     }
@@ -599,9 +538,9 @@ public class BrowserActivity extends AbstractWalletActivity {
 
     @Override
     public void finish() {
-        if (webViewParent!= null) {
+        if (webView!= null) {
             try {
-                webViewParent.removeView(webView);
+                stopAllMediaPlayback();
             } catch (Exception ignored) {
             }
         }
@@ -610,9 +549,9 @@ public class BrowserActivity extends AbstractWalletActivity {
 
     @Override
     protected void onDestroy() {
-        if (webViewParent!= null) {
+        if (webView!= null) {
             try {
-                webViewParent.removeView(webView);
+                webView.destroy();
             } catch (Exception ignored) {
             }
         }
@@ -694,10 +633,6 @@ public class BrowserActivity extends AbstractWalletActivity {
 
         if (urlBar!= null) {
             urlBar.requestLayout();
-        }
-
-        if (webViewParent!= null) {
-            webViewParent.requestLayout();
         }
 
         if (rootLayout!= null) {
@@ -801,9 +736,9 @@ public class BrowserActivity extends AbstractWalletActivity {
     private void showHistoryDialog() {
         if (historyList.isEmpty()) {
             new AlertDialog.Builder(this)
-                .setMessage(R.string.browser_no_history)
-                .setPositiveButton(R.string.browser_close, null)
-                .show();
+                  .setMessage(R.string.browser_no_history)
+                  .setPositiveButton(R.string.browser_close, null)
+                  .show();
             return;
         }
 
@@ -822,10 +757,10 @@ public class BrowserActivity extends AbstractWalletActivity {
         listView.setLayoutParams(params);
 
         final AlertDialog dialog = new AlertDialog.Builder(this)
-            .setTitle(R.string.browser_history_title)
-            .setView(listView)
-            .setPositiveButton(R.string.browser_close, null)
-            .setNegativeButton(R.string.browser_clear_history, new android.content.DialogInterface.OnClickListener() {
+              .setTitle(R.string.browser_history_title)
+              .setView(listView)
+              .setPositiveButton(R.string.browser_close, null)
+              .setNegativeButton(R.string.browser_clear_history, new android.content.DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(android.content.DialogInterface d, int which) {
                         historyList.clear();
@@ -833,7 +768,7 @@ public class BrowserActivity extends AbstractWalletActivity {
                         Toast.makeText(BrowserActivity.this, R.string.browser_clear_history, Toast.LENGTH_SHORT).show();
                     }
                 })
-            .create();
+              .create();
 
         listView.setOnItemClickListener(new android.widget.AdapterView.OnItemClickListener() {
             @Override
@@ -1057,9 +992,9 @@ public class BrowserActivity extends AbstractWalletActivity {
         }
 
         new AlertDialog.Builder(this)
-            .setTitle(R.string.browser_set_home_title)
-            .setView(input)
-            .setPositiveButton(R.string.browser_save, new android.content.DialogInterface.OnClickListener() {
+              .setTitle(R.string.browser_set_home_title)
+              .setView(input)
+              .setPositiveButton(R.string.browser_save, new android.content.DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(android.content.DialogInterface dialog, int which) {
                         String url = input.getText().toString().trim();
@@ -1080,7 +1015,7 @@ public class BrowserActivity extends AbstractWalletActivity {
                         edit.apply();
                     }
                 })
-            .setNegativeButton(R.string.browser_cancel, null)
-            .show();
+              .setNegativeButton(R.string.browser_cancel, null)
+              .show();
     }
 }
