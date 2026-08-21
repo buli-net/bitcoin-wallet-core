@@ -64,7 +64,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         rootLayout = findViewById(android.R.id.content);
         toolbarContainer = findViewById(R.id.toolbar_container);
 
-        if (getActionBar() != null) {
+        if (getActionBar()!= null) {
             getActionBar().setDisplayHomeAsUpEnabled(true);
         }
 
@@ -117,7 +117,7 @@ public class BrowserActivity extends AbstractWalletActivity {
                 String url = request.getUrl().toString();
                 String scheme = request.getUrl().getScheme();
 
-                if (scheme != null && !scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https")) {
+                if (scheme!= null &&!scheme.equalsIgnoreCase("http") &&!scheme.equalsIgnoreCase("https")) {
                     try {
                         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
                         view.getContext().startActivity(intent);
@@ -135,7 +135,7 @@ public class BrowserActivity extends AbstractWalletActivity {
                     return true;
                 }
 
-                if (url.equals(view.getUrl()) && !isNewLink) {
+                if (url.equals(view.getUrl()) &&!isNewLink) {
                     urlBar.setText(url);
                     return true;
                 }
@@ -148,13 +148,13 @@ public class BrowserActivity extends AbstractWalletActivity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                if (urlBar != null && !urlBar.getText().toString().equals(url)) {
+                if (urlBar!= null &&!urlBar.getText().toString().equals(url)) {
                     urlBar.setText(url);
                 }
                 if (!historyList.contains(url)) {
                     historyList.add(url);
                 }
-                if (hasSavedState && !isNewLink) {
+                if (hasSavedState &&!isNewLink) {
                     webView.scrollTo(scrollX, scrollY);
                     hasSavedState = false;
                 }
@@ -165,14 +165,14 @@ public class BrowserActivity extends AbstractWalletActivity {
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onShowCustomView(View view, CustomViewCallback callback) {
-                if (customView != null) {
+                if (customView!= null) {
                     customViewCallback.onCustomViewHidden();
                     return;
                 }
                 customView = view;
                 customViewCallback = callback;
                 originalSystemUiVisibility = getWindow().getDecorView().getSystemUiVisibility();
-                if (getActionBar() != null) getActionBar().hide();
+                if (getActionBar()!= null) getActionBar().hide();
                 getWindow().getDecorView().setSystemUiVisibility(
                     View.SYSTEM_UI_FLAG_FULLSCREEN |
                     View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
@@ -186,13 +186,13 @@ public class BrowserActivity extends AbstractWalletActivity {
                 if (customView == null) return;
                 ((FrameLayout) rootLayout).removeView(customView);
                 customView = null;
-                if (getActionBar() != null) getActionBar().show();
+                if (getActionBar()!= null) getActionBar().show();
                 getWindow().getDecorView().setSystemUiVisibility(originalSystemUiVisibility);
                 customViewCallback.onCustomViewHidden();
             }
         });
 
-        // === NÚT ĐIỀU HƯỞNG ===
+        // === NÚT ĐIỀU HƯỚNG ===
         btnBackWeb.setOnClickListener(v -> { if (webView.canGoBack()) webView.goBack(); });
         btnForwardWeb.setOnClickListener(v -> { if (webView.canGoForward()) webView.goForward(); });
         btnRefreshWeb.setOnClickListener(v -> {
@@ -203,7 +203,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         // === NHẬP URL ===
         urlBar.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_GO ||
-                (event != null && event.getKeyCode() == android.view.KeyEvent.KEYCODE_ENTER
+                (event!= null && event.getKeyCode() == android.view.KeyEvent.KEYCODE_ENTER
                     && event.getAction() == android.view.KeyEvent.ACTION_DOWN)) {
                 handleUrlInput();
                 return true;
@@ -214,21 +214,21 @@ public class BrowserActivity extends AbstractWalletActivity {
         // === KHÔI PHỤC TRẠNG THÁI ===
         Intent intent = getIntent();
         Uri intentData = intent.getData();
-        if (intentData != null) {
+        if (intentData!= null) {
             String newUrl = intentData.toString();
             urlBar.setText(newUrl);
             webView.loadUrl(newUrl);
             clearSavedState();
             isNewLink = true;
-        } else if (savedWebViewState != null && savedUrlBeforePause != null) {
+        } else if (savedWebViewState!= null && savedUrlBeforePause!= null) {
             webView.restoreState(savedWebViewState);
             urlBar.setText(savedUrlBeforePause);
             isNewLink = false;
             hasSavedState = true;
-        } else if (savedInstanceState != null) {
+        } else if (savedInstanceState!= null) {
             webView.restoreState(savedInstanceState);
             String restoredUrl = webView.getUrl();
-            if (restoredUrl != null) urlBar.setText(restoredUrl);
+            if (restoredUrl!= null) urlBar.setText(restoredUrl);
         }
     }
 
@@ -239,34 +239,52 @@ public class BrowserActivity extends AbstractWalletActivity {
         return true;
     }
 
-    // === ĐỔI MÀU MENU 3 CHẤM Y HỆ VÍ GIẤY ===
+    // === FIX MÀU MENU 3 CHẤM - BÊ Y NGUYÊN LOGIC TỪ PaperWalletActivity ===
     @Override
     public boolean onPrepareOptionsMenu(android.view.Menu menu) {
-        final int color = getResources().getColor(R.color.fg_on_dark_bg_network_significant);
+        final int networkSignificantColor = getResources().getColor(R.color.fg_on_dark_bg_network_significant);
         final View decor = getWindow().getDecorView();
         decor.post(() -> {
-            ArrayList<View> list = new ArrayList<>();
-            findViewsByClass(decor, "ActionMenuView", list);
-            for (View v : list) {
-                if (v instanceof ViewGroup) duyetDoiMau((ViewGroup) v, color);
+            ArrayList<View> actionMenuViews = new ArrayList<>();
+            findViewsByClass(decor, "ActionMenuView", actionMenuViews);
+            for (View amv : actionMenuViews) {
+                if (!(amv instanceof ViewGroup)) {
+                    continue;
+                }
+                ViewGroup vg = (ViewGroup) amv;
+                for (int i = 0; i < vg.getChildCount(); i++) {
+                    View itemView = vg.getChildAt(i);
+                    if (itemView.getClass().getSimpleName().contains("ActionMenuItemView")) {
+                        findAndWhiteText(itemView, networkSignificantColor);
+                    }
+                }
             }
         });
         return super.onPrepareOptionsMenu(menu);
     }
 
-    private void duyetDoiMau(ViewGroup root, int color) {
-        for (int i=0; i<root.getChildCount(); i++) {
-            View c = root.getChildAt(i);
-            if (c instanceof TextView) ((TextView)c).setTextColor(color);
-            else if (c instanceof ViewGroup) duyetDoiMau((ViewGroup)c, color);
+    private void findAndWhiteText(View root, int color) {
+        if (root instanceof TextView) {
+            ((TextView) root).setTextColor(color);
+            return;
+        }
+        if (root instanceof ViewGroup) {
+            ViewGroup vg = (ViewGroup) root;
+            for (int i = 0; i < vg.getChildCount(); i++) {
+                findAndWhiteText(vg.getChildAt(i), color);
+            }
         }
     }
 
     private void findViewsByClass(View root, String className, ArrayList<View> out) {
-        if (root.getClass().getSimpleName().contains(className)) out.add(root);
+        if (root.getClass().getSimpleName().contains(className)) {
+            out.add(root);
+        }
         if (root instanceof ViewGroup) {
-            ViewGroup g = (ViewGroup)root;
-            for (int i=0; i<g.getChildCount(); i++) findViewsByClass(g.getChildAt(i), className, out);
+            ViewGroup vg = (ViewGroup) root;
+            for (int i = 0; i < vg.getChildCount(); i++) {
+                findViewsByClass(vg.getChildAt(i), className, out);
+            }
         }
     }
 
@@ -284,7 +302,7 @@ public class BrowserActivity extends AbstractWalletActivity {
             return true;
         } else if (id == android.R.id.home) {
             luuTrangThai();
-            if (customView != null && customViewCallback != null) customViewCallback.onCustomViewHidden();
+            if (customView!= null && customViewCallback!= null) customViewCallback.onCustomViewHidden();
             finish();
             return true;
         }
@@ -293,7 +311,7 @@ public class BrowserActivity extends AbstractWalletActivity {
 
     // === LƯU/KHÔI PHỤC TRẠNG THÁI ===
     private void luuTrangThai() {
-        if (webView != null && !isFinishing()) {
+        if (webView!= null &&!isFinishing()) {
             savedWebViewState = new Bundle();
             webView.saveState(savedWebViewState);
             savedUrlBeforePause = webView.getUrl();
@@ -321,7 +339,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         super.onNewIntent(intent);
         setIntent(intent);
         Uri data = intent.getData();
-        if (data != null) {
+        if (data!= null) {
             String newUrl = data.toString();
             urlBar.setText(newUrl);
             webView.loadUrl(newUrl);
@@ -347,7 +365,7 @@ public class BrowserActivity extends AbstractWalletActivity {
 
     @Override
     public void onBackPressed() {
-        if (customView != null && customViewCallback != null) {
+        if (customView!= null && customViewCallback!= null) {
             customViewCallback.onCustomViewHidden();
             return;
         }
@@ -364,12 +382,12 @@ public class BrowserActivity extends AbstractWalletActivity {
         int bgActionBarColor = getResources().getColor(R.color.bg_action_bar);
         int fgIconColor = getResources().getColor(R.color.fg_on_dark_bg_network_significant);
 
-        if (toolbarContainer != null) toolbarContainer.setBackgroundColor(bgActionBarColor);
-        if (btnBackWeb != null) btnBackWeb.setColorFilter(fgIconColor);
-        if (btnForwardWeb != null) btnForwardWeb.setColorFilter(fgIconColor);
-        if (btnRefreshWeb != null) btnRefreshWeb.setColorFilter(fgIconColor);
+        if (toolbarContainer!= null) toolbarContainer.setBackgroundColor(bgActionBarColor);
+        if (btnBackWeb!= null) btnBackWeb.setColorFilter(fgIconColor);
+        if (btnForwardWeb!= null) btnForwardWeb.setColorFilter(fgIconColor);
+        if (btnRefreshWeb!= null) btnRefreshWeb.setColorFilter(fgIconColor);
 
-        if (urlBar != null) {
+        if (urlBar!= null) {
             int[] textColorAttr = { android.R.attr.textColorPrimary };
             TypedArray taText = obtainStyledAttributes(textColorAttr);
             int textColor = taText.getColor(0, 0);
@@ -390,7 +408,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         TypedArray taBg = obtainStyledAttributes(windowBgAttr);
         int windowBg = taBg.getColor(0, 0);
         taBg.recycle();
-        if (webView != null) webView.setBackgroundColor(windowBg);
+        if (webView!= null) webView.setBackgroundColor(windowBg);
     }
 
     @Override
@@ -407,7 +425,7 @@ public class BrowserActivity extends AbstractWalletActivity {
         if (input.isEmpty()) return;
         String finalUrl;
         if (isValidUrl(input)) {
-            finalUrl = input.startsWith("http") ? input : "https://" + input;
+            finalUrl = input.startsWith("http")? input : "https://" + input;
         } else {
             finalUrl = "https://www.google.com/search?q=" + Uri.encode(input);
         }
@@ -419,8 +437,8 @@ public class BrowserActivity extends AbstractWalletActivity {
     private boolean isValidUrl(String input) {
         if (!input.contains(".") || input.contains(" ")) return false;
         try {
-            URI uri = new URI(input.startsWith("http") ? input : "https://" + input);
-            return uri.getHost() != null && uri.getHost().contains(".");
+            URI uri = new URI(input.startsWith("http")? input : "https://" + input);
+            return uri.getHost()!= null && uri.getHost().contains(".");
         } catch (URISyntaxException e) {
             return false;
         }
@@ -435,14 +453,14 @@ public class BrowserActivity extends AbstractWalletActivity {
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        if (webView != null) webView.saveState(outState);
+        if (webView!= null) webView.saveState(outState);
     }
 
     // === TRANG CHỦ / LỊCH SỬ / CÀI ĐẶT ===
     private void loadHomeUrl() {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         String homeUrl = prefs.getString(KEY_HOME_URL, null);
-        if (homeUrl != null) {
+        if (homeUrl!= null) {
             webView.loadUrl(homeUrl);
             urlBar.setText(homeUrl);
         } else {
@@ -454,25 +472,25 @@ public class BrowserActivity extends AbstractWalletActivity {
     private void showHistoryDialog() {
         if (historyList.isEmpty()) {
             new AlertDialog.Builder(this)
-                .setMessage(R.string.browser_no_history)
-                .setPositiveButton(R.string.browser_close, null)
-                .show();
+               .setMessage(R.string.browser_no_history)
+               .setPositiveButton(R.string.browser_close, null)
+               .show();
             return;
         }
         CharSequence[] items = historyList.toArray(new CharSequence[0]);
         new AlertDialog.Builder(this)
-            .setTitle(R.string.browser_history_title)
-            .setItems(items, (dialog, which) -> {
+           .setTitle(R.string.browser_history_title)
+           .setItems(items, (dialog, which) -> {
                 String url = historyList.get(which);
                 webView.loadUrl(url);
                 urlBar.setText(url);
             })
-            .setPositiveButton(R.string.browser_clear_history, (dialog, which) -> {
+           .setPositiveButton(R.string.browser_clear_history, (dialog, which) -> {
                 historyList.clear();
                 Toast.makeText(this, R.string.browser_clear_history, Toast.LENGTH_SHORT).show();
             })
-            .setNegativeButton(R.string.browser_close, null)
-            .show();
+           .setNegativeButton(R.string.browser_close, null)
+           .show();
     }
 
     private void showSetHomeDialog() {
@@ -480,12 +498,12 @@ public class BrowserActivity extends AbstractWalletActivity {
         input.setHint(R.string.browser_home_hint);
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         String currentHome = prefs.getString(KEY_HOME_URL, null);
-        if (currentHome != null) input.setText(currentHome);
+        if (currentHome!= null) input.setText(currentHome);
 
         new AlertDialog.Builder(this)
-            .setTitle(R.string.browser_set_home_title)
-            .setView(input)
-            .setPositiveButton(R.string.browser_save, (dialog, which) -> {
+           .setTitle(R.string.browser_set_home_title)
+           .setView(input)
+           .setPositiveButton(R.string.browser_save, (dialog, which) -> {
                 String url = input.getText().toString().trim();
                 SharedPreferences.Editor edit = prefs.edit();
                 if (url.isEmpty()) {
@@ -498,7 +516,7 @@ public class BrowserActivity extends AbstractWalletActivity {
                 }
                 edit.apply();
             })
-            .setNegativeButton(R.string.browser_cancel, null)
-            .show();
+           .setNegativeButton(R.string.browser_cancel, null)
+           .show();
     }
 }
