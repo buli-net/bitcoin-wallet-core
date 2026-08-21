@@ -18,6 +18,6 @@
         android:id="@+id/menu_browser_settings"
         android:title="@string/browser_set_home_title"
         android:icon="@drawable/ic_settings_24dp"
-        android:showAsAction="ifRoom|withText"/>
+        android:showAsAction="never|withText"/>
 
 </menu>
