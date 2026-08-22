@@ -222,20 +222,16 @@
 
 <activity
     android:name="wallet.ui.BrowserActivity"
-    android:configChanges="keyboard|keyboardHidden"
+    android:parentActivityName="wallet.ui.WalletActivity"
+    android:configChanges="orientation|screenSize|keyboard|keyboardHidden"
+    android:windowSoftInputMode="adjustResize"
     android:exported="true"
+    android:noHistory="false"
+    android:launchMode="singleTop"
     android:label="@string/menu_web_browser"
     android:theme="@style/My.Preference" />
 
-
-<!-- end
-        android:exported="false "
-        android:parentActivityName="wallet.ui.WalletActivity"
-    android:windowSoftInputMode="adjustResize"
-    android:configChanges="orientation|screenSize|keyboard|keyboardHidden"
-    android:launchMode="standard"
-    android:noHistory="false"
-        -->
+<!-- end-->
 
         <provider
             android:name="androidx.core.content.FileProvider"
