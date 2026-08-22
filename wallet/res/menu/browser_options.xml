@@ -15,7 +15,6 @@
         android:titleCondensed="@string/browser_history_title"
         android:showAsAction="ifRoom|withText" />
 
-    <!-- NÚT CÀI ĐẶT - DÙNG STRING CÓ SẴN, KHÔNG FIX CỨNG -->
     <item
         android:id="@+id/menu_browser_settings_root"
         android:icon="@drawable/ic_settings_24dp"
