@@ -99,9 +99,9 @@ public class BrowserActivity extends AbstractWalletActivity {
         btnRefreshWeb = findViewById(R.id.btn_refresh_web);
         webView = findViewById(R.id.webview);
 
-        addRippleEffect(btnBackWeb);
-        addRippleEffect(btnForwardWeb);
-        addRippleEffect(btnRefreshWeb);
+        applySystemRipple(btnBackWeb);
+        applySystemRipple(btnForwardWeb);
+        applySystemRipple(btnRefreshWeb);
 
         updateAllColors();
         loadHistoryFromPrefs();
@@ -314,22 +314,13 @@ public class BrowserActivity extends AbstractWalletActivity {
         }
     }
 
-    private void addRippleEffect(ImageView imageView) {
+    private void applySystemRipple(ImageView imageView) {
         if (imageView == null) {
             return;
         }
-        try {
-            TypedValue outValue = new TypedValue();
-            getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true);
-            imageView.setBackgroundResource(outValue.resourceId);
-        } catch (Exception e) {
-            try {
-                TypedValue outValue2 = new TypedValue();
-                getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue2, true);
-                imageView.setBackgroundResource(outValue2.resourceId);
-            } catch (Exception ignored) {
-            }
-        }
+        TypedValue outValue = new TypedValue();
+        getTheme().resolveAttribute(android.R.attr.selectableItemBackground, outValue, true);
+        imageView.setBackgroundResource(outValue.resourceId);
         imageView.setClickable(true);
         imageView.setFocusable(true);
     }
